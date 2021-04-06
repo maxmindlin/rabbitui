@@ -1,5 +1,5 @@
 <p align="center">
-  <h1>RabbiTui</h1>
+  <h1 align="center">RabbiTui</h1>
 </p>
 
 WIP
