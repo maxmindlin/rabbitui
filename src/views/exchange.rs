@@ -1,18 +1,19 @@
-use super::{Pane, Drawable, centered_rect};
-use crate::{Datatable, Rowable, ManagementClient};
-use crate::models::{ExchangeInfo, ExchangeBindings};
+use super::{centered_rect, Drawable, Pane};
+use crate::models::{ExchangeBindings, ExchangeInfo};
+use crate::{DataContainer, Datatable, ManagementClient, Rowable};
 
 use termion::event::Key;
 use tui::{
     backend::Backend,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Cell, Row, Table, Clear},
+    widgets::{Block, Borders, Cell, Clear, Row, Table},
     Frame,
 };
 
-pub struct ExchangePane<'a, M> where
-    M: ManagementClient
+pub struct ExchangePane<'a, M>
+where
+    M: ManagementClient,
 {
     table: Datatable<ExchangeInfo>,
     bindings_table: Option<Datatable<ExchangeBindings>>,
@@ -20,8 +21,9 @@ pub struct ExchangePane<'a, M> where
     client: &'a M,
 }
 
-impl<'a, M> ExchangePane<'a, M> where
-    M: ManagementClient
+impl<M> ExchangePane<'_, M>
+where
+    M: ManagementClient,
 {
     fn draw_popout<B: Backend>(&self, f: &mut Frame<B>, data: &Vec<ExchangeBindings>, area: Rect) {
         let b_header_lits = ExchangeBindings::headers();
@@ -34,18 +36,16 @@ impl<'a, M> ExchangePane<'a, M> where
             .bottom_margin(1);
         let b_rows = data.iter().map(|r| {
             let vecd = r.to_row();
-            let cells = vecd
-                .iter()
-                .map(|c| Cell::from(c.clone()));
+            let cells = vecd.iter().map(|c| Cell::from(c.clone()));
             Row::new(cells).bottom_margin(1)
         });
         let b_t = Table::new(b_rows)
             .header(b_header)
             .block(Block::default().borders(Borders::ALL).title("Bindings"))
             .widths(&[
-                    Constraint::Percentage(70),
-                    Constraint::Length(30),
-                    Constraint::Max(10),
+                Constraint::Percentage(70),
+                Constraint::Length(30),
+                Constraint::Max(10),
             ]);
         let pop_area = centered_rect(60, 50, area);
         f.render_widget(Clear, pop_area);
@@ -53,10 +53,12 @@ impl<'a, M> ExchangePane<'a, M> where
     }
 }
 
-impl<'a, M> Pane<ExchangePane<'a, M>> where
-    M: ManagementClient
+impl<'a, M> Pane<ExchangePane<'a, M>>
+where
+    M: ManagementClient,
 {
-    pub fn new(client: &'a M) -> Self where
+    pub fn new(client: &'a M) -> Self
+    where
         M: ManagementClient,
     {
         let data = client.get_exchange_overview();
@@ -67,12 +69,13 @@ impl<'a, M> Pane<ExchangePane<'a, M>> where
                 bindings_table: None,
                 should_draw_popout: false,
                 client,
-            }
+            },
         }
     }
 }
 
-impl<'a, M> Drawable for ExchangePane<'a, M> where
+impl<M> Drawable for ExchangePane<'_, M>
+where
     M: ManagementClient,
 {
     fn draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
@@ -105,28 +108,28 @@ impl<'a, M> Drawable for ExchangePane<'a, M> where
             .highlight_style(selected_style)
             .highlight_symbol(">> ")
             .widths(&[
-                    Constraint::Percentage(50),
-                    Constraint::Length(30),
-                    Constraint::Max(10),
+                Constraint::Percentage(50),
+                Constraint::Length(30),
+                Constraint::Max(10),
             ]);
         f.render_stateful_widget(t, rects[0], &mut self.table.state);
         if self.should_draw_popout {
             match &self.bindings_table {
                 Some(t) => {
                     self.draw_popout(f, t.data.get(), area);
-                },
+                }
                 None => match self.table.state.selected() {
-                    None => {},
+                    None => {}
                     Some(i) => {
                         let drilldown = &row_data[i];
                         let binding_data = self.client.get_exchange_bindings(drilldown);
                         self.draw_popout(f, &binding_data, area);
-                        self.bindings_table = Some(Datatable::<ExchangeBindings>::new(binding_data));
+                        self.bindings_table =
+                            Some(Datatable::<ExchangeBindings>::new(binding_data));
                     }
-                }
+                },
             };
         } else {
-            // for clearing last table :/
             self.bindings_table = None;
         }
     }
@@ -149,6 +152,10 @@ impl<'a, M> Drawable for ExchangePane<'a, M> where
     }
 
     fn update(&mut self) {
-        
+        let data = self.client.get_exchange_overview();
+        self.table.data = DataContainer {
+            entries: data,
+            staleness: 0,
+        };
     }
 }

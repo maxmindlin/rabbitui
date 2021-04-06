@@ -4,7 +4,7 @@ pub mod overview;
 use termion::event::Key;
 use tui::{
     backend::Backend,
-    layout::{Constraint, Layout, Direction, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     Frame,
 };
 
@@ -42,8 +42,9 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
-pub struct Pane<D> where
+pub struct Pane<D>
+where
     D: Drawable,
 {
-    pub content: D
+    pub content: D,
 }

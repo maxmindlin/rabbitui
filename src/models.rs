@@ -16,10 +16,7 @@ pub struct ExchangeInfo {
 
 impl ExchangeInfo {
     pub fn headers<'a>() -> [&'a str; 2] {
-        [
-            "Name",
-            "Type",
-        ]
+        ["Name", "Type"]
     }
 }
 
@@ -31,10 +28,7 @@ impl Rowable for ExchangeInfo {
             self.name.clone()
         };
 
-        vec![
-            nice_name,
-            self.t.clone(),
-        ]
+        vec![nice_name, self.t.clone()]
     }
 }
 
@@ -53,25 +47,20 @@ pub struct ExchangeBindings {
 
 impl ExchangeBindings {
     pub fn headers<'a>() -> [&'a str; 2] {
-        [
-            "To",
-            "Routing key",
-        ]
+        ["To", "Routing key"]
     }
 }
 
 impl Rowable for ExchangeBindings {
     fn to_row(&self) -> Vec<String> {
-        vec![
-            self.dest.clone(),
-            self.routing_key.clone(),
-        ]
+        vec![self.dest.clone(), self.routing_key.clone()]
     }
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Overview {
     pub queue_totals: OverviewQueueTotals,
+    pub message_stats: OverviewMessageRates,
 }
 
 #[derive(Deserialize, Debug)]
@@ -80,4 +69,17 @@ pub struct OverviewQueueTotals {
     pub messages_ready: f64,
     #[serde(alias = "messages_unacknowledged")]
     pub messages_unacked: f64,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct OverviewMessageRates {
+    pub disk_reads: f64,
+    pub disk_reads_details: RateContainer,
+    pub disk_writes: f64,
+    pub disk_writes_details: RateContainer,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct RateContainer {
+    pub rate: f64,
 }

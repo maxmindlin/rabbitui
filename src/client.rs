@@ -1,5 +1,5 @@
+use crate::models::{ExchangeBindings, ExchangeInfo, Overview};
 use crate::ManagementClient;
-use crate::models::{ExchangeInfo, ExchangeBindings, Overview};
 
 use serde::de::DeserializeOwned;
 
@@ -16,8 +16,9 @@ impl Client {
         }
     }
 
-    pub fn get<T>(&self, url: String) -> T where
-        T: DeserializeOwned
+    pub fn get<T>(&self, url: String) -> T
+    where
+        T: DeserializeOwned,
     {
         self.client
             .get(url)
@@ -36,11 +37,11 @@ impl ManagementClient for Client {
     }
 
     fn get_exchange_bindings(&self, exch: &ExchangeInfo) -> Vec<ExchangeBindings> {
-        let n = match &*exch.vhost {
-            "/" => "%2F".to_string(),
-            _ => exch.vhost.clone(),
-        };
-        let endpoint = format!("{}/api/exchanges/{}/{}/bindings/source", self.addr, n, exch.name);
+        let n = exch.vhost.replace("/", "%2F");
+        let endpoint = format!(
+            "{}/api/exchanges/{}/{}/bindings/source",
+            self.addr, n, exch.name
+        );
         self.get::<Vec<ExchangeBindings>>(endpoint)
     }
 

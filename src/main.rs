@@ -1,14 +1,14 @@
+mod client;
 mod events;
 mod models;
-mod client;
 mod views;
 
-use views::{Drawable, Pane};
+use client::Client;
+use events::{Event, Events};
+use models::{ExchangeBindings, ExchangeInfo, Overview};
 use views::exchange::ExchangePane;
 use views::overview::OverviewPane;
-use models::{ExchangeInfo, ExchangeBindings, Overview};
-use events::{Event, Events};
-use client::Client;
+use views::{Drawable, Pane};
 
 use std::{error::Error, io};
 
@@ -18,9 +18,8 @@ use tui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, Tabs, TableState, Paragraph, Wrap},
-    Terminal,
-    Frame,
+    widgets::{Block, Borders, Paragraph, TableState, Tabs, Wrap},
+    Frame, Terminal,
 };
 
 const ASCII: &str = r#"
@@ -133,8 +132,8 @@ impl<T> Datatable<T> {
     }
 }
 
-
-struct App<'a, M> where
+struct App<'a, M>
+where
     M: ManagementClient,
 {
     client: &'a M,
@@ -143,7 +142,8 @@ struct App<'a, M> where
     overview_pane: Pane<OverviewPane<'a, M>>,
 }
 
-impl<'a, M> App<'a, M> where
+impl<'a, M> App<'a, M>
+where
     M: ManagementClient,
 {
     fn new(client: &'a M) -> Self {
@@ -157,7 +157,14 @@ impl<'a, M> App<'a, M> where
 
     fn draw<B: Backend>(&mut self, f: &mut Frame<B>) {
         let chunks = Layout::default()
-            .constraints([Constraint::Length(6), Constraint::Length(3), Constraint::Min(0)].as_ref())
+            .constraints(
+                [
+                    Constraint::Length(6),
+                    Constraint::Length(3),
+                    Constraint::Min(0),
+                ]
+                .as_ref(),
+            )
             .split(f.size());
         let titles = self
             .tabs
@@ -170,7 +177,9 @@ impl<'a, M> App<'a, M> where
             .highlight_style(Style::default().fg(Color::Yellow))
             .select(self.tabs.index);
         let text = Text::raw(ASCII);
-        let pg_title = Paragraph::new(text).block(Block::default()).wrap(Wrap { trim: false });
+        let pg_title = Paragraph::new(text)
+            .block(Block::default())
+            .wrap(Wrap { trim: false });
         f.render_widget(pg_title, chunks[0]);
         f.render_widget(tabs, chunks[1]);
         match self.tabs.index {
@@ -192,11 +201,15 @@ impl<'a, M> App<'a, M> where
                 0 => self.overview_pane.content.handle_key(key),
                 1 => self.exch_pane.content.handle_key(key),
                 _ => unreachable!(),
-            }
+            },
         }
     }
 
     fn update(&mut self) {
+        // TODO some tabs might not need constant updating.
+        // It makes sense for graphs to, but perhaps not tables.
+        // Panes can have their own knowledge and control around updates,
+        // this could be way a way to just ferry ticks to the panes.
         match self.tabs.index {
             0 => self.overview_pane.content.update(),
             1 => self.exch_pane.content.update(),
@@ -206,7 +219,8 @@ impl<'a, M> App<'a, M> where
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Terminal initialization
+    // TODO support different backend for non-MacOs.
+    // Just need to swap out Termion based upon some config setting.
     let stdout = io::stdout().into_raw_mode()?;
     let stdout = MouseTerminal::from(stdout);
     let stdout = AlternateScreen::from(stdout);
@@ -230,7 +244,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 _ => {
                     app.handle_key(key);
                 }
-            }
+            },
             Event::Tick => {
                 app.update();
             }
