@@ -141,6 +141,13 @@ where
         self.draw_chart(f, area, datasets, colors);
     }
 
+    fn draw_message_rates_list<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
+        let datasets = [&self.data.disk_read_rate, &self.data.disk_write_rate];
+        let colors = [Color::Magenta, Color::Green];
+        let labels = ["Disk read", "Disk write"];
+        self.draw_info_list(f, area, labels, datasets, colors, "/s");
+    }
+
     fn draw_info_list<B, const W: usize>(
         &self,
         f: &mut Frame<B>,
@@ -148,6 +155,7 @@ where
         labels: [&str; W],
         values: [&ChartData; W],
         colors: [Color; W],
+        suffix: &str,
     ) where
         B: Backend,
     {
@@ -158,12 +166,12 @@ where
                 ListItem::new(vec![
                     Spans::from(vec![
                         Span::styled(
-                            format!("{:<9}", l),
+                            format!("{:<12}", l),
                             Style::default().fg(colors[i])
                         ),
                         Span::raw(" "),
                         Span::styled(
-                            val.to_string(),
+                            format!("{}{}", val, suffix),
                             Style::default().add_modifier(Modifier::BOLD),
                         ),
                     ]),
@@ -180,7 +188,7 @@ where
         let datasets = [&self.data.ready, &self.data.overall, &self.data.unacked];
         let labels = ["Ready", "Total", "Unacked"];
         let colors = [Color::Yellow, Color::Cyan, Color::Red];
-        self.draw_info_list(f, area, labels, datasets, colors);
+        self.draw_info_list(f, area, labels, datasets, colors, "");
     }
 }
 
@@ -232,9 +240,14 @@ where
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
             .split(chunks[0]);
+        let rate_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(85), Constraint::Percentage(15)].as_ref())
+            .split(chunks[1]);
         self.draw_messages_panel(f, count_chunks[0]);
         self.draw_message_list(f, count_chunks[1]);
-        self.draw_message_rates_panel(f, chunks[1]);
+        self.draw_message_rates_panel(f, rate_chunks[0]);
+        self.draw_message_rates_list(f, rate_chunks[1]);
     }
 
     fn handle_key(&mut self, key: Key) {}
@@ -245,16 +258,16 @@ where
         // TODO MAKE SURE TO REMOVE DUMMY ADDITION
         self.data
             .ready
-            .push(update.queue_totals.messages_ready + 1.0);
-        self.data.overall.push(update.queue_totals.messages + 2.0);
+            .push(update.queue_totals.messages_ready);
+        self.data.overall.push(update.queue_totals.messages);
         self.data
             .unacked
-            .push(update.queue_totals.messages_unacked + 4.0);
+            .push(update.queue_totals.messages_unacked);
         self.data
             .disk_write_rate
-            .push(update.message_stats.disk_writes_details.rate + 2.0);
+            .push(update.message_stats.disk_writes_details.rate);
         self.data
             .disk_read_rate
-            .push(update.message_stats.disk_reads_details.rate + 1.0);
+            .push(update.message_stats.disk_reads_details.rate);
     }
 }
