@@ -1,0 +1,13 @@
+[package]
+name = "rabbitui"
+version = "0.1.0"
+authors = ["Max Mindlin <maxmindlin@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = { version = "0.11.2", features = ["blocking", "json"] }
+serde = { version = "1.0.125", features = ["derive"] }
+tui = "0.14.0"
+termion = "1.5.6"
