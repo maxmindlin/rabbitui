@@ -83,3 +83,43 @@ pub struct OverviewMessageRates {
 pub struct RateContainer {
     pub rate: f64,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct QueueInfo {
+    pub name: String,
+    #[serde(alias = "type")]
+    pub t: String,
+    pub state: String,
+    #[serde(alias = "messages_ready")]
+    pub ready: u64,
+    #[serde(alias = "messages_unacknowledged")]
+    pub unacked: u64,
+    #[serde(alias = "messages")]
+    pub total: u64,
+}
+
+impl QueueInfo {
+    pub fn headers<'a>() -> [&'a str; 6] {
+        [
+            "Name",
+            "Type",
+            "State",
+            "Ready",
+            "Unacked",
+            "Total",
+        ]
+    }
+}
+
+impl Rowable for QueueInfo {
+    fn to_row(&self) -> Vec<String> {
+        vec![
+            self.name.clone(),
+            self.t.clone(),
+            self.state.clone(),
+            self.ready.to_string(),
+            self.unacked.to_string(),
+            self.total.to_string(),
+        ]
+    }
+}

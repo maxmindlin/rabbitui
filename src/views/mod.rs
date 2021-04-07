@@ -1,5 +1,6 @@
 pub mod exchange;
 pub mod overview;
+pub mod queues;
 
 use termion::event::Key;
 use tui::{

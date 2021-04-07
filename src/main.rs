@@ -5,9 +5,10 @@ mod views;
 
 use client::Client;
 use events::{Event, Events};
-use models::{ExchangeBindings, ExchangeInfo, Overview};
+use models::{ExchangeBindings, ExchangeInfo, Overview, QueueInfo};
 use views::exchange::ExchangePane;
 use views::overview::OverviewPane;
+use views::queues::QueuesPane;
 use views::{Drawable, Pane};
 
 use std::{error::Error, io};
@@ -34,6 +35,7 @@ pub trait ManagementClient {
     fn get_exchange_overview(&self) -> Vec<ExchangeInfo>;
     fn get_exchange_bindings(&self, exch: &ExchangeInfo) -> Vec<ExchangeBindings>;
     fn get_overview(&self) -> Overview;
+    fn get_queues_info(&self) -> Vec<QueueInfo>;
 }
 
 pub trait Rowable {
@@ -140,6 +142,7 @@ where
     tabs: TabsState<'a>,
     exch_pane: Pane<ExchangePane<'a, M>>,
     overview_pane: Pane<OverviewPane<'a, M>>,
+    queues_pane: Pane<QueuesPane<'a, M>>,
 }
 
 impl<'a, M> App<'a, M>
@@ -149,9 +152,10 @@ where
     fn new(client: &'a M) -> Self {
         Self {
             client: &client,
-            tabs: TabsState::new(vec!["Overview", "Exchanges"]),
+            tabs: TabsState::new(vec!["Overview", "Exchanges", "Queues"]),
             exch_pane: Pane::<ExchangePane<'a, M>>::new(&client),
             overview_pane: Pane::<OverviewPane<'a, M>>::new(&client),
+            queues_pane: Pane::<QueuesPane<'a, M>>::new(&client),
         }
     }
 
@@ -185,6 +189,7 @@ where
         match self.tabs.index {
             0 => self.overview_pane.content.draw(f, chunks[2]),
             1 => self.exch_pane.content.draw(f, chunks[2]),
+            2 => self.queues_pane.content.draw(f, chunks[2]),
             _ => unreachable!(),
         }
     }
@@ -200,6 +205,7 @@ where
             _ => match self.tabs.index {
                 0 => self.overview_pane.content.handle_key(key),
                 1 => self.exch_pane.content.handle_key(key),
+                2 => self.queues_pane.content.handle_key(key),
                 _ => unreachable!(),
             },
         }
@@ -213,6 +219,7 @@ where
         match self.tabs.index {
             0 => self.overview_pane.content.update(),
             1 => self.exch_pane.content.update(),
+            2 => self.queues_pane.content.update(),
             _ => unreachable!(),
         }
     }

@@ -58,8 +58,6 @@ where
     M: ManagementClient,
 {
     pub fn new(client: &'a M) -> Self
-    where
-        M: ManagementClient,
     {
         let data = client.get_exchange_overview();
         let table = Datatable::<ExchangeInfo>::new(data);
