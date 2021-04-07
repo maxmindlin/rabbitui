@@ -2,10 +2,11 @@ mod client;
 mod events;
 mod models;
 mod views;
+mod widgets;
 
 use client::Client;
 use events::{Event, Events};
-use models::{ExchangeBindings, ExchangeInfo, Overview, QueueInfo};
+use models::{ExchangeBindings, ExchangeInfo, Overview, QueueInfo, PayloadPost, MQMessage};
 use views::exchange::ExchangePane;
 use views::overview::OverviewPane;
 use views::queues::QueuesPane;
@@ -22,7 +23,11 @@ use tui::{
     widgets::{Block, Borders, Paragraph, TableState, Tabs, Wrap},
     Frame, Terminal,
 };
+use clap::{App as CApp, Arg};
 
+const DEFAULT_USER: &str = "guest";
+const DEFAULT_PASS: &str = "guest";
+const DEFAULT_ADDR: &str = "http://localhost:15672";
 const ASCII: &str = r#"
    ___       __   __   _ ______     _ 
   / _ \___ _/ /  / /  (_)_  __/_ __(_)
@@ -36,6 +41,8 @@ pub trait ManagementClient {
     fn get_exchange_bindings(&self, exch: &ExchangeInfo) -> Vec<ExchangeBindings>;
     fn get_overview(&self) -> Overview;
     fn get_queues_info(&self) -> Vec<QueueInfo>;
+    fn post_queue_payload(&self, queue_name: String, vhost: &str, payload: String);
+    fn pop_queue_item(&self, queue_name: &str, vhost: &str) -> Option<MQMessage>;
 }
 
 pub trait Rowable {
@@ -216,16 +223,48 @@ where
         // It makes sense for graphs to, but perhaps not tables.
         // Panes can have their own knowledge and control around updates,
         // this could be way a way to just ferry ticks to the panes.
+
+        // Always send a tick update to overview graphs.
+        self.overview_pane.content.update();
         match self.tabs.index {
-            0 => self.overview_pane.content.update(),
             1 => self.exch_pane.content.update(),
             2 => self.queues_pane.content.update(),
-            _ => unreachable!(),
+            _ => {},
         }
     }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let matches = CApp::new("RabbiTui")
+        .arg(
+            Arg::new("user")
+                .about("Username for the API auth")
+                .takes_value(true)
+                .short('u')
+                .long("user")
+                .required(false)
+        )
+        .arg(
+            Arg::new("pass")
+                .about("Password for the API auth")
+                .takes_value(true)
+                .short('p')
+                .long("pass")
+                .required(false)
+        )
+        .arg(
+            Arg::new("addr")
+                .about("Http(s) address of the API. Excludes trailing slash")
+                .takes_value(true)
+                .short('a')
+                .long("addr")
+                .required(false)
+        )
+        .get_matches();
+
+    let user = matches.value_of("user").unwrap_or(DEFAULT_USER);
+    let pass = matches.value_of("pass").unwrap_or(DEFAULT_PASS);
+    let addr = matches.value_of("addr").unwrap_or(DEFAULT_ADDR);
     // TODO support different backend for non-MacOs.
     // Just need to swap out Termion based upon some config setting.
     let stdout = io::stdout().into_raw_mode()?;
@@ -233,7 +272,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let stdout = AlternateScreen::from(stdout);
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let c = Client::new("http://localhost:15672".to_owned());
+    let c = Client::new(addr, user, Some(pass.to_string()));
     let mut app = App::<Client>::new(&c);
 
     let events = Events::new();

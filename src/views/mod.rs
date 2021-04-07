@@ -43,6 +43,9 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
+/// Wrapper around common drawables.
+/// Used to maintain any common state
+/// that drawables have in common.
 pub struct Pane<D>
 where
     D: Drawable,

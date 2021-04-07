@@ -11,3 +11,5 @@ reqwest = { version = "0.11.2", features = ["blocking", "json"] }
 serde = { version = "1.0.125", features = ["derive"] }
 tui = "0.14.0"
 termion = "1.5.6"
+clipboard = "0.5.0"
+clap = "3.0.0-beta.2"

@@ -1,6 +1,15 @@
 use crate::Rowable;
+use crate::client::Ackmode;
 
-use serde::Deserialize;
+use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum MQEncoding {
+    Auto,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct ExchangeInfo {
@@ -96,6 +105,7 @@ pub struct QueueInfo {
     pub unacked: u64,
     #[serde(alias = "messages")]
     pub total: u64,
+    pub vhost: String,
 }
 
 impl QueueInfo {
@@ -122,4 +132,62 @@ impl Rowable for QueueInfo {
             self.total.to_string(),
         ]
     }
+}
+
+#[derive(Serialize, Debug)]
+pub struct PayloadPost {
+    pub properties: HashMap<String, String>,
+    pub routing_key: String,
+    pub payload: String,
+    #[serde(rename = "payload_encoding")]
+    pub encoding: String,
+}
+
+impl Default for PayloadPost {
+    fn default() -> Self {
+        Self {
+            properties: HashMap::new(),
+            routing_key: "".to_string(),
+            payload: "".to_string(),
+            encoding: "string".to_string(),
+        }
+    }
+}
+
+impl PayloadPost {
+    pub fn routing_key(mut self, key: String) -> Self {
+        self.routing_key = key;
+        self
+    }
+
+    pub fn payload(mut self, payload: String) -> Self {
+        self.payload = payload;
+        self
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub struct MQMessageGetBody {
+    count: u64,
+    ackmode: Ackmode,
+    encoding: MQEncoding,
+}
+
+impl Default for MQMessageGetBody {
+    fn default() -> Self {
+        Self {
+            count: 1,
+            ackmode: Ackmode::RejectRequeueTrue,
+            encoding: MQEncoding::Auto,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct MQMessage {
+    pub payload_bytes: u64,
+    pub redelivered: bool,
+    pub exchange: String,
+    pub routing_key: String,
+    pub payload: String,
 }
