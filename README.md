@@ -10,3 +10,5 @@
 `cargo build --release && ./target/release/rabbitui` builds in release mode and runs the resulting binary.
 
 There are a number of cli options for starting up the UI. For help use `./target/release/rabbitui --help`.
+
+At time in the application you can press `?` to see a help menu for the panel you are in.
