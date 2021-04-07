@@ -1,33 +1,21 @@
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Layout, Rect, Direction},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Text, Span},
-    widgets::{Block, Borders, Cell, Clear, Row, Table, Paragraph},
+    text::{Span, Text},
+    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table},
     Frame,
 };
 
 fn notif_rect(r: Rect) -> Rect {
     let layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Percentage(93),
-                Constraint::Percentage(7),
-            ]
-            .as_ref()
-        )
+        .constraints([Constraint::Percentage(93), Constraint::Percentage(7)].as_ref())
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(
-            [
-                Constraint::Percentage(85),
-                Constraint::Percentage(15),
-            ]
-            .as_ref()
-        )
+        .constraints([Constraint::Percentage(85), Constraint::Percentage(15)].as_ref())
         .split(layout[1])[1]
 }
 
@@ -37,14 +25,16 @@ pub struct Notification {
 
 impl Notification {
     pub fn new(msg: String) -> Self {
-        Self {
-            msg,
-        }
+        Self { msg }
     }
 
     pub fn draw<B: Backend>(&self, f: &mut Frame<B>, area: Rect) {
         let notif = Paragraph::new(Text::raw(&self.msg))
-            .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Yellow)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Yellow)),
+            )
             .alignment(Alignment::Center);
         let pop_area = notif_rect(area);
         f.render_widget(Clear, pop_area);

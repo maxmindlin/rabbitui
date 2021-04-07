@@ -6,7 +6,7 @@ mod widgets;
 
 use client::Client;
 use events::{Event, Events};
-use models::{ExchangeBindings, ExchangeInfo, Overview, QueueInfo, PayloadPost, MQMessage};
+use models::{ExchangeBindings, ExchangeInfo, MQMessage, Overview, QueueInfo};
 use views::exchange::ExchangePane;
 use views::overview::OverviewPane;
 use views::queues::QueuesPane;
@@ -14,6 +14,7 @@ use views::{Drawable, Pane};
 
 use std::{error::Error, io};
 
+use clap::{App as CApp, Arg};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::{Backend, TermionBackend},
@@ -23,7 +24,6 @@ use tui::{
     widgets::{Block, Borders, Paragraph, TableState, Tabs, Wrap},
     Frame, Terminal,
 };
-use clap::{App as CApp, Arg};
 
 const DEFAULT_USER: &str = "guest";
 const DEFAULT_PASS: &str = "guest";
@@ -230,7 +230,7 @@ where
         match self.tabs.index {
             1 => self.exch_pane.content.update(),
             2 => self.queues_pane.content.update(),
-            _ => {},
+            _ => {}
         }
     }
 }
@@ -247,7 +247,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .short('u')
                 .long("user")
                 .required(false)
-                .default_value(DEFAULT_USER)
+                .default_value(DEFAULT_USER),
         )
         .arg(
             Arg::new("pass")
@@ -256,7 +256,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .short('p')
                 .long("pass")
                 .required(false)
-                .default_value(DEFAULT_PASS)
+                .default_value(DEFAULT_PASS),
         )
         .arg(
             Arg::new("addr")
@@ -265,7 +265,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .short('a')
                 .long("addr")
                 .required(false)
-                .default_value(DEFAULT_ADDR)
+                .default_value(DEFAULT_ADDR),
         )
         .get_matches();
 

@@ -159,16 +159,14 @@ where
     ) where
         B: Backend,
     {
-        let items: Vec<ListItem> = labels.iter()
+        let items: Vec<ListItem> = labels
+            .iter()
             .enumerate()
             .map(|(i, l)| {
                 let val = values[i].last_value();
                 ListItem::new(vec![
                     Spans::from(vec![
-                        Span::styled(
-                            format!("{:<12}", l),
-                            Style::default().fg(colors[i])
-                        ),
+                        Span::styled(format!("{:<12}", l), Style::default().fg(colors[i])),
                         Span::raw(" "),
                         Span::styled(
                             format!("{}{}", val, suffix),
@@ -250,19 +248,15 @@ where
         self.draw_message_rates_list(f, rate_chunks[1]);
     }
 
-    fn handle_key(&mut self, key: Key) {}
+    fn handle_key(&mut self, _key: Key) {}
 
     fn update(&mut self) {
         let update = self.client.get_overview();
         self.counter += 1.0;
         // TODO MAKE SURE TO REMOVE DUMMY ADDITION
-        self.data
-            .ready
-            .push(update.queue_totals.messages_ready);
+        self.data.ready.push(update.queue_totals.messages_ready);
         self.data.overall.push(update.queue_totals.messages);
-        self.data
-            .unacked
-            .push(update.queue_totals.messages_unacked);
+        self.data.unacked.push(update.queue_totals.messages_unacked);
         self.data
             .disk_write_rate
             .push(update.message_stats.disk_writes_details.rate);

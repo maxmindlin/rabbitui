@@ -1,17 +1,17 @@
-use crate::widgets::Notification;
-use super::{centered_rect, Drawable, Pane};
+use super::{Drawable, Pane};
 use crate::models::QueueInfo;
+use crate::widgets::Notification;
 use crate::{DataContainer, Datatable, ManagementClient, Rowable};
 
-use clipboard::ClipboardProvider;
 use clipboard::ClipboardContext;
+use clipboard::ClipboardProvider;
 use termion::event::Key;
 use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Text, Span},
-    widgets::{Block, Borders, Cell, Clear, Row, Table, Paragraph},
+    text::{Span, Text},
+    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table},
     Frame,
 };
 
@@ -50,14 +50,14 @@ where
                 should_notif_copy: false,
                 should_notif_no_msg: false,
                 counter: 0,
-            }
+            },
         }
     }
 }
 
 impl<M> Drawable for QueuesPane<'_, M>
 where
-    M: ManagementClient
+    M: ManagementClient,
 {
     fn draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
         let data = self.table.data.get();
@@ -68,7 +68,8 @@ where
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let normal_style = Style::default();
         let header_literals = QueueInfo::headers();
-        let header_cells = header_literals.iter()
+        let header_cells = header_literals
+            .iter()
             .map(|h| Cell::from(*h).style(Style::default().fg(Color::Green)));
         let header = Row::new(header_cells)
             .style(normal_style)
@@ -76,8 +77,7 @@ where
             .bottom_margin(1);
         let rows = data.iter().map(|r| {
             let vecd = r.to_row();
-            let cells = vecd.iter()
-                .map(|c| Cell::from(c.clone()));
+            let cells = vecd.iter().map(|c| Cell::from(c.clone()));
             Row::new(cells).bottom_margin(1)
         });
         let t = Table::new(rows)
@@ -134,14 +134,14 @@ where
                         Some(m) => {
                             self.clipboard.set_contents(m.payload).unwrap();
                             self.should_notif_copy = true;
-                        },
+                        }
                         None => {
                             self.should_notif_no_msg = true;
                         }
                     }
                 }
             }
-            _ => {},
+            _ => {}
         }
     }
 

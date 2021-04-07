@@ -57,8 +57,7 @@ impl<'a, M> Pane<ExchangePane<'a, M>>
 where
     M: ManagementClient,
 {
-    pub fn new(client: &'a M) -> Self
-    {
+    pub fn new(client: &'a M) -> Self {
         let data = client.get_exchange_overview();
         let table = Datatable::<ExchangeInfo>::new(data);
         Self {

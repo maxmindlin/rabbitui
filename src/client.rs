@@ -1,4 +1,6 @@
-use crate::models::{ExchangeBindings, ExchangeInfo, Overview, QueueInfo, PayloadPost, MQMessage, MQMessageGetBody};
+use crate::models::{
+    ExchangeBindings, ExchangeInfo, MQMessage, MQMessageGetBody, Overview, PayloadPost, QueueInfo,
+};
 use crate::ManagementClient;
 
 use serde::de::DeserializeOwned;
@@ -65,10 +67,7 @@ impl ManagementClient for Client {
 
     fn get_exchange_bindings(&self, exch: &ExchangeInfo) -> Vec<ExchangeBindings> {
         let n = exch.vhost.replace("/", "%2F");
-        let endpoint = format!(
-            "/api/exchanges/{}/{}/bindings/source",
-            n, exch.name
-        );
+        let endpoint = format!("/api/exchanges/{}/{}/bindings/source", n, exch.name);
         self.get::<Vec<ExchangeBindings>>(&endpoint).unwrap()
     }
 
@@ -87,7 +86,8 @@ impl ManagementClient for Client {
             .routing_key(queue_name)
             .payload(payload);
         // TODO consider failures
-        let _ = self.client
+        let _ = self
+            .client
             .post(endpoint)
             .basic_auth("guest", Some("guest"))
             .json(&body)
@@ -98,7 +98,9 @@ impl ManagementClient for Client {
         let vhost_encoded = vhost.replace("/", "%2F");
         let endpoint = format!("/api/queues/{}/{}/get", vhost_encoded, queue_name);
         let body = MQMessageGetBody::default();
-        let mut res = self.post::<Vec<MQMessage>, MQMessageGetBody>(&endpoint, &body).unwrap();
+        let mut res = self
+            .post::<Vec<MQMessage>, MQMessageGetBody>(&endpoint, &body)
+            .unwrap();
         if res.is_empty() {
             None
         } else {

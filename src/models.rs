@@ -1,5 +1,5 @@
-use crate::Rowable;
 use crate::client::Ackmode;
+use crate::Rowable;
 
 use std::collections::HashMap;
 
@@ -110,14 +110,7 @@ pub struct QueueInfo {
 
 impl QueueInfo {
     pub fn headers<'a>() -> [&'a str; 6] {
-        [
-            "Name",
-            "Type",
-            "State",
-            "Ready",
-            "Unacked",
-            "Total",
-        ]
+        ["Name", "Type", "State", "Ready", "Unacked", "Total"]
     }
 }
 
