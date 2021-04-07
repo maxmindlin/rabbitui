@@ -13,7 +13,7 @@ use tui::{
 };
 
 const X_WINDOW: u64 = 100;
-const Y_PADDING: u64 = 5;
+const Y_PADDING: f64 = 1.1;
 
 #[derive(Default)]
 struct ChartData {
@@ -124,7 +124,7 @@ where
                             Style::default().add_modifier(Modifier::BOLD),
                         ),
                     ])
-                    .bounds([0.0, (y_max + Y_PADDING) as f64]),
+                    .bounds([0.0, y_max as f64 * Y_PADDING]),
             );
         f.render_widget(chart, area);
     }

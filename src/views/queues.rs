@@ -29,6 +29,8 @@ where
     should_notif_paste: bool,
     should_notif_copy: bool,
     should_notif_no_msg: bool,
+    // TODO move to parent pane probably
+    counter: u64,
 }
 
 impl<'a, M> Pane<QueuesPane<'a, M>>
@@ -47,6 +49,7 @@ where
                 should_notif_paste: false,
                 should_notif_copy: false,
                 should_notif_no_msg: false,
+                counter: 0,
             }
         }
     }
@@ -143,10 +146,16 @@ where
     }
 
     fn update(&mut self) {
-        let new_data = self.client.get_queues_info();
-        self.table.data = DataContainer {
-            entries: new_data,
-            staleness: 0,
-        };
+        // only update every 10 ticks. This can be a heavy update
+        // and being completely fresh isnt entirely necessary.
+        // TODO move to parrent pane?
+        if self.counter % 10 == 0 {
+            let new_data = self.client.get_queues_info();
+            self.table.data = DataContainer {
+                entries: new_data,
+                staleness: 0,
+            };
+        }
+        self.counter += 1;
     }
 }
