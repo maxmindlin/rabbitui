@@ -102,6 +102,18 @@ pub struct Datatable<T> {
     state: TableState,
 }
 
+impl<T> Default for Datatable<T> {
+    fn default() -> Self {
+        Self {
+            data: DataContainer {
+                entries: Vec::new(),
+                staleness: 0,
+            },
+            state: TableState::default(),
+        }
+    }
+}
+
 impl<T> Datatable<T> {
     fn new(data: Vec<T>) -> Self {
         Self {

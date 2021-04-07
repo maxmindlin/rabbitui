@@ -20,7 +20,7 @@ Keys:
   - l: next tab
   - k: previous row
   - j: next row
-  - return: open drilldown for selected exchange
+  - return: open/close drilldown for selected exchange
   - ?: close the help menu";
 
 pub struct ExchangePane<'a, M>
@@ -28,7 +28,8 @@ where
     M: ManagementClient,
 {
     table: Datatable<ExchangeInfo>,
-    bindings_table: Option<Datatable<ExchangeBindings>>,
+    bindings_table: Datatable<ExchangeBindings>,
+    should_fetch_bindings: bool,
     should_draw_popout: bool,
     should_show_help: bool,
     client: &'a M,
@@ -38,7 +39,8 @@ impl<M> ExchangePane<'_, M>
 where
     M: ManagementClient,
 {
-    fn draw_popout<B: Backend>(&self, f: &mut Frame<B>, data: &Vec<ExchangeBindings>, area: Rect) {
+    fn draw_popout<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
+        let data = self.bindings_table.data.get();
         let b_header_lits = ExchangeBindings::headers();
         let b_header_cells = b_header_lits
             .iter()
@@ -52,17 +54,36 @@ where
             let cells = vecd.iter().map(|c| Cell::from(c.clone()));
             Row::new(cells).bottom_margin(1)
         });
+        let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let b_t = Table::new(b_rows)
             .header(b_header)
             .block(Block::default().borders(Borders::ALL).title("Bindings"))
+            .highlight_style(selected_style)
+            .highlight_symbol(">> ")
             .widths(&[
-                Constraint::Percentage(70),
+                Constraint::Percentage(50),
                 Constraint::Length(30),
                 Constraint::Max(10),
             ]);
         let pop_area = centered_rect(60, 50, area);
         f.render_widget(Clear, pop_area);
-        f.render_widget(b_t, pop_area);
+        f.render_stateful_widget(b_t, pop_area, &mut self.bindings_table.state);
+    }
+
+    fn forward_table(&mut self) {
+        if self.should_draw_popout {
+            self.bindings_table.next();
+        } else {
+            self.table.next();
+        }
+    }
+
+    fn back_table(&mut self) {
+        if self.should_draw_popout {
+            self.bindings_table.previous();
+        } else {
+            self.table.previous();
+        }
     }
 }
 
@@ -76,7 +97,8 @@ where
         Self {
             content: ExchangePane {
                 table,
-                bindings_table: None,
+                bindings_table: Datatable::default(),
+                should_fetch_bindings: false,
                 should_draw_popout: false,
                 should_show_help: false,
                 client,
@@ -125,23 +147,18 @@ where
             ]);
         f.render_stateful_widget(t, rects[0], &mut self.table.state);
         if self.should_draw_popout {
-            match &self.bindings_table {
-                Some(t) => {
-                    self.draw_popout(f, t.data.get(), area);
-                }
-                None => match self.table.state.selected() {
-                    None => {}
-                    Some(i) => {
+            match self.table.state.selected() {
+                None => {}
+                Some(i) => {
+                    if self.should_fetch_bindings {
                         let drilldown = &row_data[i];
                         let binding_data = self.client.get_exchange_bindings(drilldown);
-                        self.draw_popout(f, &binding_data, area);
-                        self.bindings_table =
-                            Some(Datatable::<ExchangeBindings>::new(binding_data));
+                        self.bindings_table = Datatable::<ExchangeBindings>::new(binding_data);
+                        self.should_fetch_bindings = false;
                     }
-                },
-            };
-        } else {
-            self.bindings_table = None;
+                    self.draw_popout(f, area);
+                }
+            }
         }
 
         if self.should_show_help {
@@ -153,14 +170,13 @@ where
     fn handle_key(&mut self, key: Key) {
         match key {
             Key::Char('j') => {
-                self.table.next();
-                self.should_draw_popout = false;
+                self.forward_table();
             }
             Key::Char('k') => {
-                self.table.previous();
-                self.should_draw_popout = false;
+                self.back_table();
             }
             Key::Char('\n') => {
+                self.should_fetch_bindings = true;
                 self.should_draw_popout = !self.should_draw_popout;
             }
             Key::Char('?') => {
