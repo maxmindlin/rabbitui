@@ -31,7 +31,7 @@ impl Client {
     }
 
     // TODO change this to Result and cover api failures!!
-    pub fn get<T>(&self, endpoint: &str) -> T
+    pub fn get<T>(&self, endpoint: &str) -> Result<T, reqwest::Error>
     where
         T: DeserializeOwned,
     {
@@ -39,13 +39,11 @@ impl Client {
         self.client
             .get(url)
             .basic_auth(&self.user, self.pass.as_ref())
-            .send()
-            .unwrap()
+            .send()?
             .json()
-            .unwrap()
     }
 
-    pub fn post<T, S>(&self, endpoint: &str, body: &S) -> T
+    pub fn post<T, S>(&self, endpoint: &str, body: &S) -> Result<T, reqwest::Error>
     where
         T: DeserializeOwned,
         S: Serialize,
@@ -55,16 +53,14 @@ impl Client {
             .post(url)
             .basic_auth(&self.user, self.pass.as_ref())
             .json(body)
-            .send()
-            .unwrap()
+            .send()?
             .json()
-            .unwrap()
     }
 }
 
 impl ManagementClient for Client {
     fn get_exchange_overview(&self) -> Vec<ExchangeInfo> {
-        self.get::<Vec<ExchangeInfo>>("/api/exchanges")
+        self.get::<Vec<ExchangeInfo>>("/api/exchanges").unwrap()
     }
 
     fn get_exchange_bindings(&self, exch: &ExchangeInfo) -> Vec<ExchangeBindings> {
@@ -73,15 +69,15 @@ impl ManagementClient for Client {
             "/api/exchanges/{}/{}/bindings/source",
             n, exch.name
         );
-        self.get::<Vec<ExchangeBindings>>(&endpoint)
+        self.get::<Vec<ExchangeBindings>>(&endpoint).unwrap()
     }
 
     fn get_overview(&self) -> Overview {
-        self.get::<Overview>("/api/overview")
+        self.get::<Overview>("/api/overview").unwrap()
     }
 
     fn get_queues_info(&self) -> Vec<QueueInfo> {
-        self.get::<Vec<QueueInfo>>("/api/queues")
+        self.get::<Vec<QueueInfo>>("/api/queues").unwrap()
     }
 
     fn post_queue_payload(&self, queue_name: String, vhost: &str, payload: String) {
@@ -102,11 +98,19 @@ impl ManagementClient for Client {
         let vhost_encoded = vhost.replace("/", "%2F");
         let endpoint = format!("/api/queues/{}/{}/get", vhost_encoded, queue_name);
         let body = MQMessageGetBody::default();
-        let mut res = self.post::<Vec<MQMessage>, MQMessageGetBody>(&endpoint, &body);
+        let mut res = self.post::<Vec<MQMessage>, MQMessageGetBody>(&endpoint, &body).unwrap();
         if res.is_empty() {
             None
         } else {
             Some(res.remove(0))
+        }
+    }
+
+    fn ping(&self) -> Result<(), ()> {
+        // TODO better ping?
+        match self.get::<Overview>("/api/overview") {
+            Ok(_) => Ok(()),
+            Err(_) => Err(()),
         }
     }
 }

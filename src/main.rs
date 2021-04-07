@@ -43,6 +43,7 @@ pub trait ManagementClient {
     fn get_queues_info(&self) -> Vec<QueueInfo>;
     fn post_queue_payload(&self, queue_name: String, vhost: &str, payload: String);
     fn pop_queue_item(&self, queue_name: &str, vhost: &str) -> Option<MQMessage>;
+    fn ping(&self) -> Result<(), ()>;
 }
 
 pub trait Rowable {
@@ -236,6 +237,9 @@ where
 
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = CApp::new("RabbiTui")
+        .version("0.1.0")
+        .author("Max Mindlin <maxmindlin@gmail.com>")
+        .about("A TUI application for RabbitMQ management")
         .arg(
             Arg::new("user")
                 .about("Username for the API auth")
@@ -243,6 +247,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .short('u')
                 .long("user")
                 .required(false)
+                .default_value(DEFAULT_USER)
         )
         .arg(
             Arg::new("pass")
@@ -251,6 +256,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .short('p')
                 .long("pass")
                 .required(false)
+                .default_value(DEFAULT_PASS)
         )
         .arg(
             Arg::new("addr")
@@ -259,12 +265,20 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .short('a')
                 .long("addr")
                 .required(false)
+                .default_value(DEFAULT_ADDR)
         )
         .get_matches();
 
-    let user = matches.value_of("user").unwrap_or(DEFAULT_USER);
-    let pass = matches.value_of("pass").unwrap_or(DEFAULT_PASS);
-    let addr = matches.value_of("addr").unwrap_or(DEFAULT_ADDR);
+    let user = matches.value_of("user").unwrap();
+    let pass = matches.value_of("pass").unwrap();
+    let addr = matches.value_of("addr").unwrap();
+    let c = Client::new(addr, user, Some(pass.to_string()));
+    if let Err(_) = c.ping() {
+        println!("Unable to ping RabbitMQ API.");
+        println!("Check that the service is running and that creds are correct.");
+        return Ok(());
+    }
+    let mut app = App::<Client>::new(&c);
     // TODO support different backend for non-MacOs.
     // Just need to swap out Termion based upon some config setting.
     let stdout = io::stdout().into_raw_mode()?;
@@ -272,9 +286,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let stdout = AlternateScreen::from(stdout);
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let c = Client::new(addr, user, Some(pass.to_string()));
-    let mut app = App::<Client>::new(&c);
-
     let events = Events::new();
 
     loop {
