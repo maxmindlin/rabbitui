@@ -109,7 +109,7 @@ where
         self.should_notif_no_msg = false;
         match key {
             Key::Char('j') => self.table.next(),
-            Key::Char('k') => self.table.next(),
+            Key::Char('k') => self.table.previous(),
             Key::Char('p') => {
                 if let Some(i) = self.table.state.selected() {
                     // TODO handle clipboard fail.
