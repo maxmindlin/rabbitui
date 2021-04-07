@@ -1,6 +1,7 @@
 use super::{Drawable, Pane};
 use crate::models::QueueInfo;
-use crate::widgets::Notification;
+use crate::widgets::notif::Notification;
+use crate::widgets::help::Help;
 use crate::{DataContainer, Datatable, ManagementClient, Rowable};
 
 use clipboard::ClipboardContext;
@@ -10,10 +11,22 @@ use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Text},
-    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table},
+    text::{Span, Text, Spans},
+    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
     Frame,
 };
+
+const HELP: &str = "The Queues tab is where you can view information on
+existing queues.
+
+Keys:
+  - h: previous tab
+  - l: next tab
+  - k: previous row
+  - j: next row
+  - p: drop message into queue from clipboard
+  - ctrl + p: pop message from queue onto clipboard
+  - ?: close the help menu";
 
 pub struct QueuesPane<'a, M>
 where
@@ -29,6 +42,7 @@ where
     should_notif_paste: bool,
     should_notif_copy: bool,
     should_notif_no_msg: bool,
+    should_show_help: bool,
     // TODO move to parent pane probably
     counter: u64,
 }
@@ -49,6 +63,7 @@ where
                 should_notif_paste: false,
                 should_notif_copy: false,
                 should_notif_no_msg: false,
+                should_show_help: false,
                 counter: 0,
             },
         }
@@ -103,6 +118,9 @@ where
         } else if self.should_notif_no_msg {
             let notif = Notification::new("No messages to copy!".to_string());
             notif.draw(f, area);
+        } else if self.should_show_help {
+            let help = Help::new(HELP);
+            help.draw(f, area);
         }
     }
 
@@ -140,6 +158,9 @@ where
                         }
                     }
                 }
+            }
+            Key::Char('?') => {
+                self.should_show_help = !self.should_show_help;
             }
             _ => {}
         }

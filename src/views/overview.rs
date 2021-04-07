@@ -1,5 +1,6 @@
 use super::{Drawable, Pane};
 use crate::ManagementClient;
+use crate::widgets::help::Help;
 
 use termion::event::Key;
 use tui::{
@@ -14,6 +15,16 @@ use tui::{
 
 const X_WINDOW: u64 = 100;
 const Y_PADDING: f64 = 1.1;
+const HELP: &str = "Welcome to RabbiTui! The help displayed
+here is relevant to the Overview tab. Every help panel will be specific to
+the tab you are in.
+
+The overview pane shows high level throughput analytics.
+
+Keys:
+  - h: previous tab
+  - l: next tab
+  - ?: close the help menu";
 
 #[derive(Default)]
 struct ChartData {
@@ -65,6 +76,7 @@ where
     data: OverviewData,
     client: &'a M,
     counter: f64,
+    should_show_help: bool,
 }
 
 impl<M> OverviewPane<'_, M>
@@ -100,12 +112,6 @@ where
         let chart = Chart::new(datasets)
             .block(
                 Block::default()
-                    .title(Span::styled(
-                        "Messages",
-                        Style::default()
-                            .fg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD),
-                    ))
                     .borders(Borders::ALL),
             )
             .x_axis(
@@ -115,7 +121,6 @@ where
             )
             .y_axis(
                 Axis::default()
-                    .title("Count")
                     .style(Style::default().fg(Color::Gray))
                     .labels(vec![
                         Span::raw("0"),
@@ -220,6 +225,7 @@ where
                     disk_read_rate,
                     disk_write_rate,
                 },
+                should_show_help: false,
             },
         }
     }
@@ -246,9 +252,20 @@ where
         self.draw_message_list(f, count_chunks[1]);
         self.draw_message_rates_panel(f, rate_chunks[0]);
         self.draw_message_rates_list(f, rate_chunks[1]);
+        if self.should_show_help {
+            let help = Help::new(HELP);
+            help.draw(f, area);
+        }
     }
 
-    fn handle_key(&mut self, _key: Key) {}
+    fn handle_key(&mut self, key: Key) {
+        match key {
+            Key::Char('?') => {
+                self.should_show_help = !self.should_show_help;
+            }
+            _ => {}
+        }
+    }
 
     fn update(&mut self) {
         let update = self.client.get_overview();

@@ -1,4 +1,5 @@
 use super::{centered_rect, Drawable, Pane};
+use crate::widgets::help::Help;
 use crate::models::{ExchangeBindings, ExchangeInfo};
 use crate::{DataContainer, Datatable, ManagementClient, Rowable};
 
@@ -11,6 +12,17 @@ use tui::{
     Frame,
 };
 
+const HELP: &str = "The Exchanges tab is where you view
+all existing exchanges with drilldown information.
+
+Keys:
+  - h: previous tab
+  - l: next tab
+  - k: previous row
+  - j: next row
+  - return: open drilldown for selected exchange
+  - ?: close the help menu";
+
 pub struct ExchangePane<'a, M>
 where
     M: ManagementClient,
@@ -18,6 +30,7 @@ where
     table: Datatable<ExchangeInfo>,
     bindings_table: Option<Datatable<ExchangeBindings>>,
     should_draw_popout: bool,
+    should_show_help: bool,
     client: &'a M,
 }
 
@@ -65,6 +78,7 @@ where
                 table,
                 bindings_table: None,
                 should_draw_popout: false,
+                should_show_help: false,
                 client,
             },
         }
@@ -129,6 +143,11 @@ where
         } else {
             self.bindings_table = None;
         }
+
+        if self.should_show_help {
+            let help = Help::new(HELP);
+            help.draw(f, area);
+        }
     }
 
     fn handle_key(&mut self, key: Key) {
@@ -143,6 +162,9 @@ where
             }
             Key::Char('\n') => {
                 self.should_draw_popout = !self.should_draw_popout;
+            }
+            Key::Char('?') => {
+                self.should_show_help = !self.should_show_help;
             }
             _ => {}
         }

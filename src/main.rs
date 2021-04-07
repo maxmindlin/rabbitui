@@ -18,7 +18,7 @@ use clap::{App as CApp, Arg};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::{Backend, TermionBackend},
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect, Alignment},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
     widgets::{Block, Borders, Paragraph, TableState, Tabs, Wrap},
@@ -167,6 +167,36 @@ where
         }
     }
 
+    fn draw_header<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
+        let text = Text::raw(ASCII);
+        let pg_title = Paragraph::new(text)
+            .block(Block::default())
+            .wrap(Wrap { trim: false });
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
+                Constraint::Percentage(20),
+                Constraint::Percentage(5),
+            ])
+            .split(area);
+        let help_t = Text::raw("Press ? for help");
+        let p = Paragraph::new(help_t)
+            .alignment(Alignment::Right)
+            .block(Block::default());
+        let meta_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(50),
+                Constraint::Min(0),
+            ])
+            .split(chunks[3]);
+        f.render_widget(pg_title, chunks[0]);
+        f.render_widget(p, meta_chunks[1]);
+    }
+
     fn draw<B: Backend>(&mut self, f: &mut Frame<B>) {
         let chunks = Layout::default()
             .constraints(
@@ -188,11 +218,7 @@ where
             .block(Block::default().borders(Borders::ALL).title("Tabs"))
             .highlight_style(Style::default().fg(Color::Yellow))
             .select(self.tabs.index);
-        let text = Text::raw(ASCII);
-        let pg_title = Paragraph::new(text)
-            .block(Block::default())
-            .wrap(Wrap { trim: false });
-        f.render_widget(pg_title, chunks[0]);
+        self.draw_header(f, chunks[0]);
         f.render_widget(tabs, chunks[1]);
         match self.tabs.index {
             0 => self.overview_pane.content.draw(f, chunks[2]),
