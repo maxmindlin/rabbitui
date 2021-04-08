@@ -15,11 +15,16 @@ use views::{Drawable, StatefulPane};
 use std::{error::Error, io, io::Stdout};
 
 use clap::{App as CApp, Arg};
-use termion::{event::Key, input::MouseTerminal, raw::{RawTerminal, IntoRawMode}, screen::AlternateScreen};
+use termion::{
+    event::Key,
+    input::MouseTerminal,
+    raw::{IntoRawMode, RawTerminal},
+    screen::AlternateScreen,
+};
 use tui::{
     backend::{Backend, TermionBackend},
-    layout::{Constraint, Direction, Layout, Rect, Alignment},
-    style::{Color, Modifier, Style},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Style},
     text::{Span, Spans, Text},
     widgets::{Block, Borders, Paragraph, TableState, Tabs, Wrap},
     Frame, Terminal,
@@ -112,9 +117,7 @@ impl<T> Default for Datatable<T> {
 impl<T> Datatable<T> {
     fn new(data: Vec<T>) -> Self {
         Self {
-            data: DataContainer {
-                entries: data,
-            },
+            data: DataContainer { entries: data },
             state: TableState::default(),
         }
     }
@@ -168,10 +171,7 @@ impl<'a, B, const N: usize> TabsManager<'a, B, N>
 where
     B: Backend,
 {
-    pub fn new(
-        tabs: [&'a str; N],
-        panes: [Box<dyn StatefulPane<B> + 'a>; N]
-    ) -> Self {
+    pub fn new(tabs: [&'a str; N], panes: [Box<dyn StatefulPane<B> + 'a>; N]) -> Self {
         Self {
             tabs: TabsState::new(tabs),
             panes,
@@ -245,8 +245,8 @@ where
                     Box::new(OverviewPane::<'a, M>::new(&client)),
                     Box::new(ExchangePane::<'a, M>::new(&client)),
                     Box::new(QueuesPane::<'a, M>::new(&client)),
-                ]
-            )
+                ],
+            ),
         }
     }
 
@@ -271,10 +271,7 @@ where
             .block(Block::default());
         let meta_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Percentage(50),
-                Constraint::Min(0),
-            ])
+            .constraints([Constraint::Percentage(50), Constraint::Min(0)])
             .split(chunks[3]);
         f.render_widget(pg_title, chunks[0]);
         f.render_widget(p, meta_chunks[1]);
@@ -291,7 +288,8 @@ where
                 .as_ref(),
             )
             .split(f.size());
-        let titles = self.manager
+        let titles = self
+            .manager
             .titles()
             .iter()
             .map(|t| Spans::from(Span::styled(*t, Style::default().fg(Color::Green))))

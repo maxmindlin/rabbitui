@@ -1,6 +1,6 @@
 use super::{centered_rect, Drawable, StatefulPane};
-use crate::widgets::help::Help;
 use crate::models::{ExchangeBindings, ExchangeInfo};
+use crate::widgets::help::Help;
 use crate::{DataContainer, Datatable, ManagementClient, Rowable};
 
 use termion::event::Key;
@@ -192,8 +192,6 @@ where
 
     fn update(&mut self) {
         let data = self.client.get_exchange_overview();
-        self.table.data = DataContainer {
-            entries: data,
-        };
+        self.table.data = DataContainer { entries: data };
     }
 }

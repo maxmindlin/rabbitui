@@ -1,7 +1,7 @@
 use super::{Drawable, StatefulPane};
 use crate::models::QueueInfo;
-use crate::widgets::notif::Notification;
 use crate::widgets::help::Help;
+use crate::widgets::notif::Notification;
 use crate::{DataContainer, Datatable, ManagementClient, Rowable};
 
 use clipboard::ClipboardContext;
@@ -11,7 +11,7 @@ use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Text, Spans},
+    text::{Span, Spans, Text},
     widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
     Frame,
 };
@@ -47,7 +47,7 @@ where
     counter: u64,
 }
 
-impl <'a, M> QueuesPane<'a, M>
+impl<'a, M> QueuesPane<'a, M>
 where
     M: ManagementClient,
 {
@@ -55,15 +55,15 @@ where
         let data = client.get_queues_info();
         let table = Datatable::<QueueInfo>::new(data);
         Self {
-                table,
-                client,
-                // TODO handle unable to make clipboard?
-                clipboard: ClipboardProvider::new().unwrap(),
-                should_notif_paste: false,
-                should_notif_copy: false,
-                should_notif_no_msg: false,
-                should_show_help: false,
-                counter: 0,
+            table,
+            client,
+            // TODO handle unable to make clipboard?
+            clipboard: ClipboardProvider::new().unwrap(),
+            should_notif_paste: false,
+            should_notif_copy: false,
+            should_notif_no_msg: false,
+            should_show_help: false,
+            counter: 0,
         }
     }
 }
@@ -177,8 +177,6 @@ where
 
     fn update(&mut self) {
         let new_data = self.client.get_queues_info();
-        self.table.data = DataContainer {
-            entries: new_data,
-        };
+        self.table.data = DataContainer { entries: new_data };
     }
 }

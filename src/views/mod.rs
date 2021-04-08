@@ -16,7 +16,7 @@ where
     fn draw(&mut self, f: &mut Frame<B>, area: Rect);
 }
 
-pub trait StatefulPane<B>: Drawable<B> 
+pub trait StatefulPane<B>: Drawable<B>
 where
     B: Backend,
 {

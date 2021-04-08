@@ -1,6 +1,6 @@
 use super::{Drawable, StatefulPane};
-use crate::ManagementClient;
 use crate::widgets::help::Help;
+use crate::ManagementClient;
 
 use termion::event::Key;
 use tui::{
@@ -96,16 +96,16 @@ where
         let mut disk_write_rate = ChartData::default();
         disk_write_rate.push(data.message_stats.disk_writes_details.rate);
         Self {
-                client,
-                counter: 0.,
-                data: OverviewData {
-                    overall,
-                    ready,
-                    unacked,
-                    disk_read_rate,
-                    disk_write_rate,
-                },
-                should_show_help: false,
+            client,
+            counter: 0.,
+            data: OverviewData {
+                overall,
+                ready,
+                unacked,
+                disk_read_rate,
+                disk_write_rate,
+            },
+            should_show_help: false,
         }
     }
     fn draw_chart<B, const W: usize>(
@@ -115,7 +115,7 @@ where
         data: [&ChartData; W],
         colors: [Color; W],
     ) where
-        B: Backend
+        B: Backend,
     {
         let y_max = data.iter().map(|d| d.y_max()).max().unwrap();
         let datasets: Vec<Dataset> = data
@@ -135,10 +135,7 @@ where
             (self.counter as u64) - X_WINDOW
         };
         let chart = Chart::new(datasets)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL),
-            )
+            .block(Block::default().borders(Borders::ALL))
             .x_axis(
                 Axis::default()
                     .style(Style::default().fg(Color::Gray))
@@ -247,8 +244,6 @@ where
             help.draw(f, area);
         }
     }
-
-
 }
 
 impl<M, B> StatefulPane<B> for OverviewPane<'_, M>

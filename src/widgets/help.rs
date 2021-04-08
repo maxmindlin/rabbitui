@@ -3,7 +3,7 @@ use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Text, Spans},
+    text::{Span, Spans, Text},
     widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
     Frame,
 };
@@ -25,13 +25,7 @@ impl Help {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(
-                        Span::styled(
-                            "Help",
-                            Style::default()
-                                .fg(Color::Red)
-                        )
-                    )
+                    .title(Span::styled("Help", Style::default().fg(Color::Red))),
             )
             .wrap(Wrap { trim: true });
         let pop_area = centered_rect(30, 40, area);
