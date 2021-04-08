@@ -1,5 +1,4 @@
-use crate::client::Ackmode;
-use crate::Rowable;
+use crate::{client::Ackmode, Rowable};
 
 use std::collections::HashMap;
 

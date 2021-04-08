@@ -7,10 +7,9 @@ mod widgets;
 use client::Client;
 use events::{Event, Events};
 use models::{ExchangeBindings, ExchangeInfo, MQMessage, Overview, QueueInfo};
-use views::exchange::ExchangePane;
-use views::overview::OverviewPane;
-use views::queues::QueuesPane;
-use views::{Drawable, StatefulPane};
+use views::{
+    exchange::ExchangePane, overview::OverviewPane, queues::QueuesPane, Drawable, StatefulPane,
+};
 
 use std::{error::Error, io, io::Stdout};
 

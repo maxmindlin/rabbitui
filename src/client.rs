@@ -1,10 +1,12 @@
-use crate::models::{
-    ExchangeBindings, ExchangeInfo, MQMessage, MQMessageGetBody, Overview, PayloadPost, QueueInfo,
+use crate::{
+    models::{
+        ExchangeBindings, ExchangeInfo, MQMessage, MQMessageGetBody, Overview, PayloadPost,
+        QueueInfo,
+    },
+    ManagementClient,
 };
-use crate::ManagementClient;
 
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "snake_case")]

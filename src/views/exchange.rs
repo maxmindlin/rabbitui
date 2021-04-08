@@ -1,7 +1,9 @@
 use super::{centered_rect, Drawable, StatefulPane};
-use crate::models::{ExchangeBindings, ExchangeInfo};
-use crate::widgets::help::Help;
-use crate::{DataContainer, Datatable, ManagementClient, Rowable};
+use crate::{
+    models::{ExchangeBindings, ExchangeInfo},
+    widgets::help::Help,
+    DataContainer, Datatable, ManagementClient, Rowable,
+};
 
 use termion::event::Key;
 use tui::{

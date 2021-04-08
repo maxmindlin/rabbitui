@@ -1,6 +1,5 @@
 use super::{Drawable, StatefulPane};
-use crate::widgets::help::Help;
-use crate::ManagementClient;
+use crate::{widgets::help::Help, ManagementClient};
 
 use termion::event::Key;
 use tui::{

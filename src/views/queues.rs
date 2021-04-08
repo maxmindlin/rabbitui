@@ -1,11 +1,11 @@
 use super::{Drawable, StatefulPane};
-use crate::models::QueueInfo;
-use crate::widgets::help::Help;
-use crate::widgets::notif::Notification;
-use crate::{DataContainer, Datatable, ManagementClient, Rowable};
+use crate::{
+    models::QueueInfo,
+    widgets::{help::Help, notif::Notification},
+    DataContainer, Datatable, ManagementClient, Rowable,
+};
 
-use clipboard::ClipboardContext;
-use clipboard::ClipboardProvider;
+use clipboard::{ClipboardContext, ClipboardProvider};
 use termion::event::Key;
 use tui::{
     backend::Backend,
