@@ -1,4 +1,4 @@
-use super::{Drawable, Pane};
+use super::{Drawable, StatefulPane};
 use crate::ManagementClient;
 use crate::widgets::help::Help;
 
@@ -79,10 +79,35 @@ where
     should_show_help: bool,
 }
 
-impl<M> OverviewPane<'_, M>
+impl<'a, M> OverviewPane<'a, M>
 where
     M: ManagementClient,
 {
+    pub fn new(client: &'a M) -> Self {
+        let data = client.get_overview();
+        let mut overall = ChartData::default();
+        overall.push(data.queue_totals.messages);
+        let mut ready = ChartData::default();
+        ready.push(data.queue_totals.messages_ready);
+        let mut unacked = ChartData::default();
+        unacked.push(data.queue_totals.messages_unacked);
+        let mut disk_read_rate = ChartData::default();
+        disk_read_rate.push(data.message_stats.disk_reads_details.rate);
+        let mut disk_write_rate = ChartData::default();
+        disk_write_rate.push(data.message_stats.disk_writes_details.rate);
+        Self {
+                client,
+                counter: 0.,
+                data: OverviewData {
+                    overall,
+                    ready,
+                    unacked,
+                    disk_read_rate,
+                    disk_write_rate,
+                },
+                should_show_help: false,
+        }
+    }
     fn draw_chart<B, const W: usize>(
         &self,
         f: &mut Frame<B>,
@@ -90,7 +115,7 @@ where
         data: [&ChartData; W],
         colors: [Color; W],
     ) where
-        B: Backend,
+        B: Backend
     {
         let y_max = data.iter().map(|d| d.y_max()).max().unwrap();
         let datasets: Vec<Dataset> = data
@@ -195,47 +220,12 @@ where
     }
 }
 
-impl<'a, M> Pane<OverviewPane<'a, M>>
+impl<M, B> Drawable<B> for OverviewPane<'_, M>
 where
     M: ManagementClient,
+    B: Backend,
 {
-    pub fn new(client: &'a M) -> Self
-    where
-        M: ManagementClient,
-    {
-        let data = client.get_overview();
-        let mut overall = ChartData::default();
-        overall.push(data.queue_totals.messages);
-        let mut ready = ChartData::default();
-        ready.push(data.queue_totals.messages_ready);
-        let mut unacked = ChartData::default();
-        unacked.push(data.queue_totals.messages_unacked);
-        let mut disk_read_rate = ChartData::default();
-        disk_read_rate.push(data.message_stats.disk_reads_details.rate);
-        let mut disk_write_rate = ChartData::default();
-        disk_write_rate.push(data.message_stats.disk_writes_details.rate);
-        Self {
-            content: OverviewPane {
-                client,
-                counter: 0.,
-                data: OverviewData {
-                    overall,
-                    ready,
-                    unacked,
-                    disk_read_rate,
-                    disk_write_rate,
-                },
-                should_show_help: false,
-            },
-        }
-    }
-}
-
-impl<M> Drawable for OverviewPane<'_, M>
-where
-    M: ManagementClient,
-{
-    fn draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
+    fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)].as_ref())
@@ -258,6 +248,18 @@ where
         }
     }
 
+
+}
+
+impl<M, B> StatefulPane<B> for OverviewPane<'_, M>
+where
+    B: Backend,
+    M: ManagementClient,
+{
+    fn update_in_background(&self) -> bool {
+        true
+    }
+
     fn handle_key(&mut self, key: Key) {
         match key {
             Key::Char('?') => {
@@ -270,7 +272,6 @@ where
     fn update(&mut self) {
         let update = self.client.get_overview();
         self.counter += 1.0;
-        // TODO MAKE SURE TO REMOVE DUMMY ADDITION
         self.data.ready.push(update.queue_totals.messages_ready);
         self.data.overall.push(update.queue_totals.messages);
         self.data.unacked.push(update.queue_totals.messages_unacked);

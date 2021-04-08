@@ -1,4 +1,4 @@
-use super::{centered_rect, Drawable, Pane};
+use super::{centered_rect, Drawable, StatefulPane};
 use crate::widgets::help::Help;
 use crate::models::{ExchangeBindings, ExchangeInfo};
 use crate::{DataContainer, Datatable, ManagementClient, Rowable};
@@ -35,10 +35,23 @@ where
     client: &'a M,
 }
 
-impl<M> ExchangePane<'_, M>
+impl<'a, M> ExchangePane<'a, M>
 where
     M: ManagementClient,
 {
+    pub fn new(client: &'a M) -> Self {
+        let data = client.get_exchange_overview();
+        let table = Datatable::<ExchangeInfo>::new(data);
+        Self {
+            table,
+            bindings_table: Datatable::default(),
+            should_fetch_bindings: false,
+            should_draw_popout: false,
+            should_show_help: false,
+            client,
+        }
+    }
+
     fn draw_popout<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
         let data = self.bindings_table.data.get();
         let b_header_lits = ExchangeBindings::headers();
@@ -87,31 +100,12 @@ where
     }
 }
 
-impl<'a, M> Pane<ExchangePane<'a, M>>
+impl<M, B> Drawable<B> for ExchangePane<'_, M>
 where
     M: ManagementClient,
+    B: Backend,
 {
-    pub fn new(client: &'a M) -> Self {
-        let data = client.get_exchange_overview();
-        let table = Datatable::<ExchangeInfo>::new(data);
-        Self {
-            content: ExchangePane {
-                table,
-                bindings_table: Datatable::default(),
-                should_fetch_bindings: false,
-                should_draw_popout: false,
-                should_show_help: false,
-                client,
-            },
-        }
-    }
-}
-
-impl<M> Drawable for ExchangePane<'_, M>
-where
-    M: ManagementClient,
-{
-    fn draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
+    fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
         let row_data = self.table.data.get();
         let rects = Layout::default()
             .constraints([Constraint::Percentage(100)].as_ref())
@@ -166,6 +160,16 @@ where
             help.draw(f, area);
         }
     }
+}
+
+impl<M, B> StatefulPane<B> for ExchangePane<'_, M>
+where
+    M: ManagementClient,
+    B: Backend,
+{
+    fn update_in_background(&self) -> bool {
+        false
+    }
 
     fn handle_key(&mut self, key: Key) {
         match key {
@@ -190,7 +194,6 @@ where
         let data = self.client.get_exchange_overview();
         self.table.data = DataContainer {
             entries: data,
-            staleness: 0,
         };
     }
 }

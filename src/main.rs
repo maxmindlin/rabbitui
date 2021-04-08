@@ -10,12 +10,12 @@ use models::{ExchangeBindings, ExchangeInfo, MQMessage, Overview, QueueInfo};
 use views::exchange::ExchangePane;
 use views::overview::OverviewPane;
 use views::queues::QueuesPane;
-use views::{Drawable, Pane};
+use views::{Drawable, StatefulPane};
 
-use std::{error::Error, io};
+use std::{error::Error, io, io::Stdout};
 
 use clap::{App as CApp, Arg};
-use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
+use termion::{event::Key, input::MouseTerminal, raw::{RawTerminal, IntoRawMode}, screen::AlternateScreen};
 use tui::{
     backend::{Backend, TermionBackend},
     layout::{Constraint, Direction, Layout, Rect, Alignment},
@@ -36,6 +36,8 @@ const ASCII: &str = r#"
                                       
 "#;
 
+type TBackend = TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<Stdout>>>>;
+
 pub trait ManagementClient {
     fn get_exchange_overview(&self) -> Vec<ExchangeInfo>;
     fn get_exchange_bindings(&self, exch: &ExchangeInfo) -> Vec<ExchangeBindings>;
@@ -50,33 +52,31 @@ pub trait Rowable {
     fn to_row(&self) -> Vec<String>;
 }
 
-// taken from
-// https://github.com/fdehau/tui-rs/blob/25ff2e5e61f8902101e485743992db2412f77aad/examples/util/mod.rs
-pub struct TabsState<'a> {
-    pub titles: Vec<&'a str>,
+pub struct TabsState<'a, const L: usize> {
+    pub titles: [&'a str; L],
     pub index: usize,
 }
 
-impl<'a> TabsState<'a> {
-    pub fn new(titles: Vec<&'a str>) -> TabsState {
-        TabsState { titles, index: 0 }
+impl<'a, const L: usize> TabsState<'a, L> {
+    pub fn new(titles: [&'a str; L]) -> Self {
+        Self { titles, index: 0 }
     }
+
     pub fn next(&mut self) {
-        self.index = (self.index + 1) % self.titles.len();
+        self.index = (self.index + 1) % L;
     }
 
     pub fn previous(&mut self) {
         if self.index > 0 {
             self.index -= 1;
         } else {
-            self.index = self.titles.len() - 1;
+            self.index = L - 1;
         }
     }
 }
 
 pub struct DataContainer<T> {
     entries: Vec<T>,
-    staleness: usize,
 }
 
 impl<T> DataContainer<T> {
@@ -86,10 +86,6 @@ impl<T> DataContainer<T> {
 
     pub fn get_mut(&mut self) -> &mut Vec<T> {
         &mut self.entries
-    }
-
-    pub fn is_stale(&self) -> bool {
-        self.staleness >= 10
     }
 
     pub fn set(&mut self, o: Vec<T>) {
@@ -107,7 +103,6 @@ impl<T> Default for Datatable<T> {
         Self {
             data: DataContainer {
                 entries: Vec::new(),
-                staleness: 0,
             },
             state: TableState::default(),
         }
@@ -119,7 +114,6 @@ impl<T> Datatable<T> {
         Self {
             data: DataContainer {
                 entries: data,
-                staleness: 0,
             },
             state: TableState::default(),
         }
@@ -154,32 +148,109 @@ impl<T> Datatable<T> {
     }
 }
 
-struct App<'a, M>
+/// The manager gives us a way to structure the relationship
+/// between our tabs and panes. Serves as a middleman between
+/// app and panes.
+///
+/// Also provides nicety guarantees. For example, tabs vs panes
+/// should always be 1-1 - const generics here enforce that 1-1 size
+/// which makes indexing guaranteed safe (we cannot compile
+/// if the tabs index range is different that of our panes).
+struct TabsManager<'a, B, const N: usize>
 where
-    M: ManagementClient,
+    B: Backend,
 {
-    client: &'a M,
-    tabs: TabsState<'a>,
-    exch_pane: Pane<ExchangePane<'a, M>>,
-    overview_pane: Pane<OverviewPane<'a, M>>,
-    queues_pane: Pane<QueuesPane<'a, M>>,
+    tabs: TabsState<'a, N>,
+    panes: [Box<dyn StatefulPane<B> + 'a>; N],
 }
 
-impl<'a, M> App<'a, M>
+impl<'a, B, const N: usize> TabsManager<'a, B, N>
 where
-    M: ManagementClient,
+    B: Backend,
 {
-    fn new(client: &'a M) -> Self {
+    pub fn new(
+        tabs: [&'a str; N],
+        panes: [Box<dyn StatefulPane<B> + 'a>; N]
+    ) -> Self {
         Self {
-            client: &client,
-            tabs: TabsState::new(vec!["Overview", "Exchanges", "Queues"]),
-            exch_pane: Pane::<ExchangePane<'a, M>>::new(&client),
-            overview_pane: Pane::<OverviewPane<'a, M>>::new(&client),
-            queues_pane: Pane::<QueuesPane<'a, M>>::new(&client),
+            tabs: TabsState::new(tabs),
+            panes,
         }
     }
 
-    fn draw_header<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
+    /// Returns the index that the tabs are at. This will also
+    /// correspond to the currently active pane at that
+    /// same index.
+    pub fn curr(&self) -> usize {
+        self.tabs.index
+    }
+
+    /// Returns the titles given at initialization. These
+    /// are the same as what get drawn into each tab text content.
+    pub fn titles(&self) -> &[&'a str; N] {
+        &self.tabs.titles
+    }
+
+    /// Progres to the next tab. Wraps around
+    /// the range upper bound.
+    pub fn next(&mut self) {
+        self.tabs.next();
+    }
+
+    /// Go to the previous tab. Wraps around
+    /// the range lower bound.
+    pub fn prev(&mut self) {
+        self.tabs.previous();
+    }
+
+    /// Returns a mutable reference to the currently active
+    /// pane.
+    pub fn pane(&mut self) -> &mut Box<dyn StatefulPane<B> + 'a> {
+        &mut self.panes[self.tabs.index]
+    }
+
+    /// Contains the logic for updating all the panes that
+    /// "should" be updated upon the state provided by
+    /// the panes themselves. Ie, update the active pane,
+    /// and then update any panes that should be updated in
+    /// the background.
+    pub fn update(&mut self) {
+        let active = self.curr();
+        self.panes
+            .iter_mut()
+            .enumerate()
+            .filter(|(i, p)| *i == active || p.update_in_background())
+            .for_each(|(_, p)| p.update());
+    }
+}
+
+/// The main container for our TUI app. Handles
+/// initial setup and highest level state.
+struct App<'a, B>
+where
+    B: Backend,
+{
+    manager: TabsManager<'a, B, 3>,
+}
+
+impl<'a, B> App<'a, B>
+where
+    B: Backend + 'a,
+{
+    fn new<M: ManagementClient>(client: &'a M) -> Self {
+        Self {
+            manager: TabsManager::new(
+                ["Overview", "Exchanges", "Queues"],
+                [
+                    Box::new(OverviewPane::<'a, M>::new(&client)),
+                    Box::new(ExchangePane::<'a, M>::new(&client)),
+                    Box::new(QueuesPane::<'a, M>::new(&client)),
+                ]
+            )
+        }
+    }
+
+    fn draw_header(&mut self, f: &mut Frame<B>, area: Rect) {
         let text = Text::raw(ASCII);
         let pg_title = Paragraph::new(text)
             .block(Block::default())
@@ -209,7 +280,7 @@ where
         f.render_widget(p, meta_chunks[1]);
     }
 
-    fn draw<B: Backend>(&mut self, f: &mut Frame<B>) {
+    fn draw(&mut self, f: &mut Frame<B>) {
         let chunks = Layout::default()
             .constraints(
                 [
@@ -220,56 +291,36 @@ where
                 .as_ref(),
             )
             .split(f.size());
-        let titles = self
-            .tabs
-            .titles
+        let titles = self.manager
+            .titles()
             .iter()
             .map(|t| Spans::from(Span::styled(*t, Style::default().fg(Color::Green))))
             .collect();
         let tabs = Tabs::new(titles)
             .block(Block::default().borders(Borders::ALL).title("Tabs"))
             .highlight_style(Style::default().fg(Color::Yellow))
-            .select(self.tabs.index);
+            .select(self.manager.curr());
         self.draw_header(f, chunks[0]);
         f.render_widget(tabs, chunks[1]);
-        match self.tabs.index {
-            0 => self.overview_pane.content.draw(f, chunks[2]),
-            1 => self.exch_pane.content.draw(f, chunks[2]),
-            2 => self.queues_pane.content.draw(f, chunks[2]),
-            _ => unreachable!(),
-        }
+        self.manager.pane().draw(f, chunks[2]);
     }
 
     fn handle_key(&mut self, key: Key) {
         match key {
             Key::Char('l') => {
-                self.tabs.next();
+                self.manager.next();
             }
             Key::Char('h') => {
-                self.tabs.previous();
+                self.manager.prev();
             }
-            _ => match self.tabs.index {
-                0 => self.overview_pane.content.handle_key(key),
-                1 => self.exch_pane.content.handle_key(key),
-                2 => self.queues_pane.content.handle_key(key),
-                _ => unreachable!(),
-            },
+            _ => {
+                self.manager.pane().handle_key(key);
+            }
         }
     }
 
     fn update(&mut self) {
-        // TODO some tabs might not need constant updating.
-        // It makes sense for graphs to, but perhaps not tables.
-        // Panes can have their own knowledge and control around updates,
-        // this could be way a way to just ferry ticks to the panes.
-
-        // Always send a tick update to overview graphs.
-        self.overview_pane.content.update();
-        match self.tabs.index {
-            1 => self.exch_pane.content.update(),
-            2 => self.queues_pane.content.update(),
-            _ => {}
-        }
+        self.manager.update();
     }
 }
 
@@ -316,9 +367,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("Check that the service is running and that creds are correct.");
         return Ok(());
     }
-    let mut app = App::<Client>::new(&c);
+    let mut app = App::<TBackend>::new::<Client>(&c);
     // TODO support different backend for non-MacOs.
-    // Just need to swap out Termion based upon some config setting.
+    // Just need to swap out Termion based upon some config or compile setting.
     let stdout = io::stdout().into_raw_mode()?;
     let stdout = MouseTerminal::from(stdout);
     let stdout = AlternateScreen::from(stdout);

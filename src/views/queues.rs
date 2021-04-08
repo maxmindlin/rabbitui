@@ -1,4 +1,4 @@
-use super::{Drawable, Pane};
+use super::{Drawable, StatefulPane};
 use crate::models::QueueInfo;
 use crate::widgets::notif::Notification;
 use crate::widgets::help::Help;
@@ -47,7 +47,7 @@ where
     counter: u64,
 }
 
-impl<'a, M> Pane<QueuesPane<'a, M>>
+impl <'a, M> QueuesPane<'a, M>
 where
     M: ManagementClient,
 {
@@ -55,7 +55,6 @@ where
         let data = client.get_queues_info();
         let table = Datatable::<QueueInfo>::new(data);
         Self {
-            content: QueuesPane {
                 table,
                 client,
                 // TODO handle unable to make clipboard?
@@ -65,16 +64,16 @@ where
                 should_notif_no_msg: false,
                 should_show_help: false,
                 counter: 0,
-            },
         }
     }
 }
 
-impl<M> Drawable for QueuesPane<'_, M>
+impl<M, B> Drawable<B> for QueuesPane<'_, M>
 where
     M: ManagementClient,
+    B: Backend,
 {
-    fn draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
+    fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
         let data = self.table.data.get();
         let rects = Layout::default()
             .constraints([Constraint::Percentage(100)].as_ref())
@@ -123,6 +122,16 @@ where
             help.draw(f, area);
         }
     }
+}
+
+impl<M, B> StatefulPane<B> for QueuesPane<'_, M>
+where
+    M: ManagementClient,
+    B: Backend,
+{
+    fn update_in_background(&self) -> bool {
+        false
+    }
 
     fn handle_key(&mut self, key: Key) {
         self.should_notif_copy = false;
@@ -167,16 +176,9 @@ where
     }
 
     fn update(&mut self) {
-        // only update every 10 ticks. This can be a heavy update
-        // and being completely fresh isnt entirely necessary.
-        // TODO move to parrent pane?
-        if self.counter % 10 == 0 {
-            let new_data = self.client.get_queues_info();
-            self.table.data = DataContainer {
-                entries: new_data,
-                staleness: 0,
-            };
-        }
-        self.counter += 1;
+        let new_data = self.client.get_queues_info();
+        self.table.data = DataContainer {
+            entries: new_data,
+        };
     }
 }

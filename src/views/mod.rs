@@ -9,8 +9,18 @@ use tui::{
     Frame,
 };
 
-pub trait Drawable {
-    fn draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect);
+pub trait Drawable<B>
+where
+    B: Backend,
+{
+    fn draw(&mut self, f: &mut Frame<B>, area: Rect);
+}
+
+pub trait StatefulPane<B>: Drawable<B> 
+where
+    B: Backend,
+{
+    fn update_in_background(&self) -> bool;
     fn handle_key(&mut self, key: Key);
     fn update(&mut self);
 }
@@ -41,14 +51,4 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             .as_ref(),
         )
         .split(popup_layout[1])[1]
-}
-
-/// Wrapper around common drawables.
-/// Used to maintain any common state
-/// that drawables have in common.
-pub struct Pane<D>
-where
-    D: Drawable,
-{
-    pub content: D,
 }
