@@ -43,8 +43,6 @@ where
     should_notif_copy: bool,
     should_notif_no_msg: bool,
     should_show_help: bool,
-    // TODO move to parent pane probably
-    counter: u64,
 }
 
 impl<'a, M> QueuesPane<'a, M>
@@ -63,7 +61,6 @@ where
             should_notif_copy: false,
             should_notif_no_msg: false,
             should_show_help: false,
-            counter: 0,
         }
     }
 }

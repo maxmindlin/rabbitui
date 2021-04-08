@@ -36,14 +36,14 @@ impl ChartData {
             .iter()
             .cloned()
             .map(|n| n.1)
-            .fold(0., f64::max)
+            .fold(0./0., f64::max)
     }
     pub fn y_min(&self) -> f64 {
         self.data
             .iter()
             .cloned()
             .map(|n| n.1)
-            .fold(0., f64::min)
+            .fold(0./0., f64::min)
     }
 
     pub fn x_max(&self) -> f64 {
@@ -79,11 +79,11 @@ impl<'a, const W: usize> RChart<'a, W> {
         let y_max = self.data
             .iter()
             .map(|d| d.y_max())
-            .fold(0., f64::max);
+            .fold(0./0., f64::max);
         let y_min = self.data
             .iter()
             .map(|d| d.y_min())
-            .fold(0., f64::min);
+            .fold(0./0., f64::min);
         let x_max = self.data
             .iter()
             .map(|d| d.x_max())
