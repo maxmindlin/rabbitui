@@ -34,6 +34,15 @@ impl Client {
         }
     }
 
+    pub fn delete(&self, endpoint: &str) {
+        let url = format!("{}{}", self.addr, endpoint);
+        // TODO care about this result.
+        let _ = self.client
+            .delete(url)
+            .basic_auth(&self.user, self.pass.as_ref())
+            .send();
+    }
+
     // TODO change this to Result and cover api failures!!
     pub fn get<T>(&self, endpoint: &str) -> Result<T, reqwest::Error>
     where
@@ -116,5 +125,11 @@ impl ManagementClient for Client {
             Ok(_) => Ok(()),
             Err(_) => Err(()),
         }
+    }
+
+    fn purge_queue(&self, queue_name: &str, vhost: &str) {
+        let encoded = vhost.replace("/", "%2F");
+        let endpoint = format!("/api/queues/{}/{}/contents", encoded, queue_name);
+        self.delete(&endpoint);
     }
 }

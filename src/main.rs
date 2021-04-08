@@ -53,6 +53,7 @@ pub trait ManagementClient {
     fn post_queue_payload(&self, queue_name: String, vhost: &str, payload: String);
     fn pop_queue_item(&self, queue_name: &str, vhost: &str) -> Option<MQMessage>;
     fn ping(&self) -> Result<(), ()>;
+    fn purge_queue(&self, queue_name: &str, vhost: &str);
 }
 
 pub trait Rowable {
