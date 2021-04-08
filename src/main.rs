@@ -42,6 +42,9 @@ const ASCII: &str = r#"
 
 type TBackend = TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<Stdout>>>>;
 
+/// data access trait for the RabbitMQ
+/// Management API. Implemented by any
+/// struct used for the app data backend.
 pub trait ManagementClient {
     fn get_exchange_overview(&self) -> Vec<ExchangeInfo>;
     fn get_exchange_bindings(&self, exch: &ExchangeInfo) -> Vec<ExchangeBindings>;
@@ -97,6 +100,8 @@ impl<T> DataContainer<T> {
     }
 }
 
+/// Stateful container for tabular data. Manages
+/// state such as currently selected row, etc.
 pub struct Datatable<T> {
     data: DataContainer<T>,
     state: TableState,
@@ -236,7 +241,7 @@ impl<'a, B> App<'a, B>
 where
     B: Backend + 'a,
 {
-    fn new<M: ManagementClient>(client: &'a M) -> Self {
+    pub fn new<M: ManagementClient>(client: &'a M) -> Self {
         Self {
             manager: TabsManager::new(
                 ["Overview", "Exchanges", "Queues"],
@@ -247,6 +252,26 @@ where
                 ],
             ),
         }
+    }
+
+    /// The main draw cycle for the app. Draws app-wide
+    /// content (headers, tabs, etc.) and then forwards
+    /// the reserved pane space to the tab manager for
+    /// specific view drawing.
+    pub fn draw(&mut self, f: &mut Frame<B>) {
+        let chunks = Layout::default()
+            .constraints(
+                [
+                    Constraint::Length(6),
+                    Constraint::Length(3),
+                    Constraint::Min(0),
+                ]
+                .as_ref(),
+            )
+            .split(f.size());
+        self.draw_header(f, chunks[0]);
+        self.draw_tabs(f, chunks[1]);
+        self.manager.pane().draw(f, chunks[2]);
     }
 
     fn draw_header(&mut self, f: &mut Frame<B>, area: Rect) {
@@ -276,19 +301,8 @@ where
         f.render_widget(p, meta_chunks[1]);
     }
 
-    fn draw(&mut self, f: &mut Frame<B>) {
-        let chunks = Layout::default()
-            .constraints(
-                [
-                    Constraint::Length(6),
-                    Constraint::Length(3),
-                    Constraint::Min(0),
-                ]
-                .as_ref(),
-            )
-            .split(f.size());
-        let titles = self
-            .manager
+    fn draw_tabs(&self, f: &mut Frame<B>, area: Rect) {
+        let titles = self.manager
             .titles()
             .iter()
             .map(|t| Spans::from(Span::styled(*t, Style::default().fg(Color::Green))))
@@ -297,11 +311,13 @@ where
             .block(Block::default().borders(Borders::ALL).title("Tabs"))
             .highlight_style(Style::default().fg(Color::Yellow))
             .select(self.manager.curr());
-        self.draw_header(f, chunks[0]);
-        f.render_widget(tabs, chunks[1]);
-        self.manager.pane().draw(f, chunks[2]);
+        f.render_widget(tabs, area);
     }
 
+    /// Transforms key inputs into app specific behavior. App itself
+    /// reserves certain keys that will be used across the app,
+    /// regardless of active view. Any other keys are passed off
+    /// to the tab manager.
     fn handle_key(&mut self, key: Key) {
         match key {
             Key::Char('l') => {
@@ -316,6 +332,9 @@ where
         }
     }
 
+    /// Handles tick updates. Most cases are just passed
+    /// to the tab manager to determine if individual panes
+    /// need updated.
     fn update(&mut self) {
         self.manager.update();
     }

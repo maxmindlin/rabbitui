@@ -9,6 +9,9 @@ use tui::{
     Frame,
 };
 
+/// A generically drawable object. Simply describes
+/// ability to be drawn given an area boundary and
+/// a frame.
 pub trait Drawable<B>
 where
     B: Backend,
@@ -16,6 +19,9 @@ where
     fn draw(&mut self, f: &mut Frame<B>, area: Rect);
 }
 
+
+/// A pane that manages its own state. This involves
+/// any knowledge around handling updates and inputs.
 pub trait StatefulPane<B>: Drawable<B>
 where
     B: Backend,

@@ -1,19 +1,16 @@
 use super::{Drawable, StatefulPane};
-use crate::{widgets::help::Help, ManagementClient};
+use crate::{widgets::help::Help, widgets::chart::{RChart, ChartData}, ManagementClient};
 
 use termion::event::Key;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    symbols,
     text::{Span, Spans},
-    widgets::{Axis, Block, Borders, Chart, Dataset, GraphType, List, ListItem},
+    widgets::{Block, Borders, List, ListItem},
     Frame,
 };
 
-const X_WINDOW: u64 = 100;
-const Y_PADDING: f64 = 1.1;
 const HELP: &str = "Welcome to RabbiTui! The help displayed
 here is relevant to the Overview tab. Every help panel will be specific to
 the tab you are in.
@@ -24,40 +21,6 @@ Keys:
   - h: previous tab
   - l: next tab
   - ?: close the help menu";
-
-#[derive(Default)]
-struct ChartData {
-    data: Vec<(f64, f64)>,
-    // For right now we are using
-    // a generic tick counter as our
-    // time tracking.
-    counter: f64,
-}
-
-impl ChartData {
-    fn push(&mut self, n: f64) {
-        self.data.push((self.counter.clone(), n));
-        self.counter += 1.0;
-        if self.data.len() > X_WINDOW as usize {
-            self.data.remove(0);
-        }
-    }
-
-    fn x_max(&self) -> u64 {
-        self.data.iter().map(|p| p.0 as u64).max().unwrap()
-    }
-
-    fn y_max(&self) -> u64 {
-        self.data.iter().map(|p| p.1 as u64).max().unwrap()
-    }
-
-    fn last_value(&self) -> f64 {
-        // this is safe where this is used because we always seed with
-        // at least 1 value. If we wanted to be abstract, we would
-        // check that data is not empty.
-        self.data.iter().last().unwrap().1
-    }
-}
 
 #[derive(Default)]
 struct OverviewData {
@@ -107,64 +70,17 @@ where
             should_show_help: false,
         }
     }
-    fn draw_chart<B, const W: usize>(
-        &self,
-        f: &mut Frame<B>,
-        area: Rect,
-        data: [&ChartData; W],
-        colors: [Color; W],
-    ) where
-        B: Backend,
-    {
-        let y_max = data.iter().map(|d| d.y_max()).max().unwrap();
-        let datasets: Vec<Dataset> = data
-            .iter()
-            .enumerate()
-            .map(|(i, d)| {
-                Dataset::default()
-                    .marker(symbols::Marker::Dot)
-                    .style(Style::default().fg(colors[i]))
-                    .graph_type(GraphType::Line)
-                    .data(d.data.as_slice())
-            })
-            .collect();
-        let lb = if (self.counter as u64) < X_WINDOW {
-            0
-        } else {
-            (self.counter as u64) - X_WINDOW
-        };
-        let chart = Chart::new(datasets)
-            .block(Block::default().borders(Borders::ALL))
-            .x_axis(
-                Axis::default()
-                    .style(Style::default().fg(Color::Gray))
-                    .bounds([lb as f64, self.counter]),
-            )
-            .y_axis(
-                Axis::default()
-                    .style(Style::default().fg(Color::Gray))
-                    .labels(vec![
-                        Span::raw("0"),
-                        Span::styled(
-                            format!("{}", y_max),
-                            Style::default().add_modifier(Modifier::BOLD),
-                        ),
-                    ])
-                    .bounds([0.0, y_max as f64 * Y_PADDING]),
-            );
-        f.render_widget(chart, area);
-    }
 
     fn draw_messages_panel<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
         let datasets = [&self.data.overall, &self.data.ready, &self.data.unacked];
         let colors = [Color::Yellow, Color::Cyan, Color::Red];
-        self.draw_chart(f, area, datasets, colors);
+        RChart::new(datasets, colors).draw(f, area);
     }
 
     fn draw_message_rates_panel<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
         let datasets = [&self.data.disk_read_rate, &self.data.disk_write_rate];
         let colors = [Color::Magenta, Color::Green];
-        self.draw_chart(f, area, datasets, colors);
+        RChart::new(datasets, colors).draw(f, area);
     }
 
     fn draw_message_rates_list<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
