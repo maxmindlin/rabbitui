@@ -2,7 +2,7 @@ use super::{Drawable, StatefulPane, centered_rect};
 use crate::{
     TabsState,
     models::QueueInfo,
-    widgets::{help::Help, notif::Notification},
+    widgets::{help::Help, notif::Notification, confirmation::ConfirmationBox},
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 
@@ -31,15 +31,12 @@ Keys:
   - return: confirm prompts
   - ?: close the help menu";
 
-const CONFIRM: &str = "This is a destructive action. Confirm action:";
-
-
 pub struct QueuesPane<'a, M>
 where
     M: ManagementClient,
 {
     table: Datatable<QueueInfo>,
-    confirmation: Datatable<&'a str>,
+    confirmation: ConfirmationBox<'a>,
     client: &'a M,
     // TODO this should probably be a Rc<RefMut<>>
     // to the parent app. Probably not best
@@ -61,10 +58,9 @@ where
     pub fn new(client: &'a M) -> Self {
         let data = client.get_queues_info();
         let table = Datatable::<QueueInfo>::new(data);
-        let c_table = Datatable::<&'a str>::new(vec!["Yes", "No"]);
         Self {
             table,
-            confirmation: c_table,
+            confirmation: ConfirmationBox::default(),
             client,
             // TODO handle unable to make clipboard?
             clipboard: ClipboardProvider::new().unwrap(),
@@ -75,45 +71,6 @@ where
             should_show_help: false,
             should_confirm: false,
         }
-    }
-
-    fn draw_confirmation_box<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
-        let pop_area = centered_rect(30, 30, area);
-        let background = Block::default()
-            .title(Span::styled("Warning", Style::default().fg(Color::Yellow)))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::LightYellow));
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Percentage(10),
-                Constraint::Percentage(20),
-                Constraint::Min(0),
-            ])
-            .margin(1)
-            .split(pop_area);
-        let txt = Paragraph::new(Text::raw(CONFIRM))
-            .alignment(Alignment::Center)
-            .wrap(Wrap { trim: true });
-        let data = self.confirmation.data.get();
-        let rows = data.iter().map(|r| {
-            let vecd = vec![r.to_string()];
-            let cell = vecd.iter()
-                .map(|c| Cell::from(c.clone()));
-            Row::new(cell).bottom_margin(1)
-        });
-        let selected_style = Style::default().add_modifier(Modifier::REVERSED);
-        let t = Table::new(rows)
-            .block(Block::default())
-            .highlight_style(selected_style)
-            .highlight_symbol(">> ")
-            .widths(&[
-                Constraint::Percentage(100),
-            ]);
-        f.render_widget(Clear, pop_area);
-        f.render_widget(background, pop_area);
-        f.render_widget(txt, chunks[1]);
-        f.render_stateful_widget(t, chunks[2], &mut self.confirmation.state);
     }
 }
 
@@ -166,7 +123,7 @@ where
         } else if self.should_show_help {
             Help::new(HELP).draw(f, area);
         } else if self.should_confirm {
-            self.draw_confirmation_box(f, area);
+            self.confirmation.draw(f, area);
         } else if self.should_notif_purged {
             Notification::new("Queue purged!".to_string()).draw(f, area);
         }
@@ -236,22 +193,18 @@ where
                 }
             }
             Key::Char('\n') => {
-                // TODO clean up - this is crunchy
-                // confirmation popup is open
                 if self.should_confirm {
-                    // selected a confirmation
-                    if let Some(i) = self.confirmation.state.selected() {
-                        if self.confirmation.data.get()[i] == "Yes" {
-                            // row on the queues table is selected
-                            if let Some(j) = self.table.state.selected() {
-                                let info = &self.table.data.get()[j];
-                                self.client.purge_queue(&info.name, &info.vhost);
-                                self.should_notif_purged = true;
-                            }
+                    // The confirmation box is already open and a
+                    // second enter command has been issued.
+                    if self.confirmation.is_confirmed() {
+                        if let Some(i) = self.table.state.selected() {
+                            let info = &self.table.data.get()[i];
+                            self.client.purge_queue(&info.name, &info.vhost);
+                            self.should_notif_purged = true;
                         }
                     }
+                    self.confirmation.reset();
                     self.should_confirm = false;
-                    self.confirmation = Datatable::<&'a str>::new(vec!["Yes", "No"]);
                 }
             }
             Key::Char('?') => {
