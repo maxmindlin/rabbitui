@@ -19,7 +19,6 @@ where
     fn draw(&mut self, f: &mut Frame<B>, area: Rect);
 }
 
-
 /// A pane that manages its own state. This involves
 /// any knowledge around handling updates and inputs.
 pub trait StatefulPane<B>: Drawable<B>

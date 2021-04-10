@@ -37,7 +37,8 @@ impl Client {
     pub fn delete(&self, endpoint: &str) {
         let url = format!("{}{}", self.addr, endpoint);
         // TODO care about this result.
-        let _ = self.client
+        let _ = self
+            .client
             .delete(url)
             .basic_auth(&self.user, self.pass.as_ref())
             .send();

@@ -303,7 +303,8 @@ where
     }
 
     fn draw_tabs(&self, f: &mut Frame<B>, area: Rect) {
-        let titles = self.manager
+        let titles = self
+            .manager
             .titles()
             .iter()
             .map(|t| Spans::from(Span::styled(*t, Style::default().fg(Color::Green))))

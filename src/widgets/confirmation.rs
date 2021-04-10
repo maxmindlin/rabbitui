@@ -1,14 +1,13 @@
 use crate::{
-    TabsState,
     models::QueueInfo,
     views::centered_rect,
     widgets::{help::Help, notif::Notification},
-    DataContainer, Datatable, ManagementClient, Rowable,
+    DataContainer, Datatable, ManagementClient, Rowable, TabsState,
 };
 
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Layout, Rect, Direction},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
     widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
@@ -47,8 +46,7 @@ impl<'a> ConfirmationBox<'a> {
         let data = self.table.data.get();
         let rows = data.iter().map(|r| {
             let vecd = vec![r.to_string()];
-            let cell = vecd.iter()
-                .map(|c| Cell::from(c.clone()));
+            let cell = vecd.iter().map(|c| Cell::from(c.clone()));
             Row::new(cell).bottom_margin(1)
         });
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
@@ -56,9 +54,7 @@ impl<'a> ConfirmationBox<'a> {
             .block(Block::default())
             .highlight_style(selected_style)
             .highlight_symbol(">> ")
-            .widths(&[
-                Constraint::Percentage(100),
-            ]);
+            .widths(&[Constraint::Percentage(100)]);
         f.render_widget(Clear, pop_area);
         f.render_widget(background, pop_area);
         f.render_widget(txt, chunks[1]);

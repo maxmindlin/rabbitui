@@ -1,5 +1,11 @@
 use super::{Drawable, StatefulPane};
-use crate::{widgets::help::Help, widgets::chart::{RChart, ChartData}, ManagementClient};
+use crate::{
+    widgets::{
+        chart::{ChartData, RChart},
+        help::Help,
+    },
+    ManagementClient,
+};
 
 use termion::event::Key;
 use tui::{

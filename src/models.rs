@@ -4,6 +4,16 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+trait ToRate {
+    fn to_rate(&self) -> String;
+}
+
+impl ToRate for String {
+    fn to_rate(&self) -> String {
+        format!("{}/s", self)
+    }
+}
+
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum MQEncoding {
@@ -98,6 +108,7 @@ pub struct QueueInfo {
     #[serde(alias = "type")]
     pub t: String,
     pub state: String,
+    pub message_stats: QueueMsgStats,
     #[serde(alias = "messages_ready")]
     pub ready: u64,
     #[serde(alias = "messages_unacknowledged")]
@@ -107,9 +118,29 @@ pub struct QueueInfo {
     pub vhost: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct QueueMsgStats {
+    pub publish: u64,
+    pub publish_details: RateContainer,
+    pub deliver_get: u64,
+    pub deliver_get_details: RateContainer,
+    pub ack: u64,
+    pub ack_details: RateContainer,
+}
+
 impl QueueInfo {
-    pub fn headers<'a>() -> [&'a str; 6] {
-        ["Name", "Type", "State", "Ready", "Unacked", "Total"]
+    pub fn headers<'a>() -> [&'a str; 9] {
+        [
+            "Name",
+            "Type",
+            "State",
+            "Ready",
+            "Unacked",
+            "Total",
+            "Incoming",
+            "Deliver / Get",
+            "Ack",
+        ]
     }
 }
 
@@ -122,6 +153,9 @@ impl Rowable for QueueInfo {
             self.ready.to_string(),
             self.unacked.to_string(),
             self.total.to_string(),
+            self.message_stats.ack_details.rate.to_string().to_rate(),
+            self.message_stats.deliver_get_details.rate.to_string().to_rate(),
+            self.message_stats.ack_details.rate.to_string().to_rate(),
         ]
     }
 }

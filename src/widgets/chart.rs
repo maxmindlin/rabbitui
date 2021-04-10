@@ -36,14 +36,14 @@ impl ChartData {
             .iter()
             .cloned()
             .map(|n| n.1)
-            .fold(0./0., f64::max)
+            .fold(0. / 0., f64::max)
     }
     pub fn y_min(&self) -> f64 {
         self.data
             .iter()
             .cloned()
             .map(|n| n.1)
-            .fold(0./0., f64::min)
+            .fold(0. / 0., f64::min)
     }
 
     pub fn x_max(&self) -> f64 {
@@ -76,19 +76,11 @@ impl<'a, const W: usize> RChart<'a, W> {
     }
 
     pub fn draw<B: Backend>(&self, f: &mut Frame<B>, area: Rect) {
-        let y_max = self.data
-            .iter()
-            .map(|d| d.y_max())
-            .fold(0./0., f64::max);
-        let y_min = self.data
-            .iter()
-            .map(|d| d.y_min())
-            .fold(0./0., f64::min);
-        let x_max = self.data
-            .iter()
-            .map(|d| d.x_max())
-            .fold(0., f64::max);
-        let datasets: Vec<Dataset> = self.data
+        let y_max = self.data.iter().map(|d| d.y_max()).fold(0. / 0., f64::max);
+        let y_min = self.data.iter().map(|d| d.y_min()).fold(0. / 0., f64::min);
+        let x_max = self.data.iter().map(|d| d.x_max()).fold(0., f64::max);
+        let datasets: Vec<Dataset> = self
+            .data
             .iter()
             .enumerate()
             .map(|(i, d)| {
@@ -109,22 +101,22 @@ impl<'a, const W: usize> RChart<'a, W> {
             .x_axis(
                 Axis::default()
                     .style(Style::default().fg(Color::Gray))
-                    .bounds([lb, x_max])
+                    .bounds([lb, x_max]),
             )
             .y_axis(
                 Axis::default()
-                .style(Style::default().fg(Color::Gray))
-                .labels(vec![
-                    Span::styled(
-                        format!("{}", y_min as u64),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
-                    Span::styled(
-                        format!("{}", (y_max * Y_PADDING) as u64),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
-                ])
-                .bounds([0., y_max * Y_PADDING]),
+                    .style(Style::default().fg(Color::Gray))
+                    .labels(vec![
+                        Span::styled(
+                            format!("{}", y_min as u64),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            format!("{}", (y_max * Y_PADDING) as u64),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ),
+                    ])
+                    .bounds([0., y_max * Y_PADDING]),
             );
         f.render_widget(chart, area);
     }

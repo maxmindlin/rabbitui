@@ -1,16 +1,15 @@
-use super::{Drawable, StatefulPane, centered_rect};
+use super::{centered_rect, Drawable, StatefulPane};
 use crate::{
-    TabsState,
     models::QueueInfo,
-    widgets::{help::Help, notif::Notification, confirmation::ConfirmationBox},
-    DataContainer, Datatable, ManagementClient, Rowable,
+    widgets::{confirmation::ConfirmationBox, help::Help, notif::Notification},
+    DataContainer, Datatable, ManagementClient, Rowable, TabsState,
 };
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use termion::event::Key;
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Layout, Rect, Direction},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
     widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
@@ -106,12 +105,15 @@ where
             .highlight_style(selected_style)
             .highlight_symbol(">> ")
             .widths(&[
-                Constraint::Percentage(16),
-                Constraint::Percentage(16),
-                Constraint::Percentage(16),
-                Constraint::Percentage(16),
-                Constraint::Percentage(16),
-                Constraint::Percentage(16),
+                Constraint::Percentage(20),
+                Constraint::Percentage(10),
+                Constraint::Percentage(10),
+                Constraint::Percentage(10),
+                Constraint::Percentage(10),
+                Constraint::Percentage(10),
+                Constraint::Percentage(10),
+                Constraint::Percentage(10),
+                Constraint::Percentage(10),
             ]);
         f.render_stateful_widget(t, rects[0], &mut self.table.state);
         if self.should_notif_paste {
