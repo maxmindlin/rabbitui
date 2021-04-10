@@ -97,7 +97,7 @@ pub struct OverviewMessageRates {
     pub disk_writes_details: RateContainer,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct RateContainer {
     pub rate: f64,
 }
@@ -108,6 +108,7 @@ pub struct QueueInfo {
     #[serde(alias = "type")]
     pub t: String,
     pub state: String,
+    #[serde(default)]
     pub message_stats: QueueMsgStats,
     #[serde(alias = "messages_ready")]
     pub ready: u64,
@@ -118,7 +119,8 @@ pub struct QueueInfo {
     pub vhost: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(default)]
 pub struct QueueMsgStats {
     pub publish: u64,
     pub publish_details: RateContainer,
