@@ -18,8 +18,7 @@ use tui::{
 };
 
 const HELP: &str = "Welcome to RabbiTui! The help displayed
-here is relevant to the Overview tab. Every help panel will be specific to
-the tab you are in.
+here is relevant to the Overview tab. Every help panel will be specific to the tab you are in.
 
 The overview pane shows high level throughput analytics.
 
@@ -114,7 +113,7 @@ where
                 let val = values[i].last_value();
                 ListItem::new(vec![
                     Spans::from(vec![
-                        Span::styled(format!("{:<12}", l), Style::default().fg(colors[i])),
+                        Span::styled(format!("{:<10}", l), Style::default().fg(colors[i])),
                         Span::raw(" "),
                         Span::styled(
                             format!("{}{}", val, suffix),
