@@ -1,8 +1,8 @@
-use super::{centered_rect, Drawable, StatefulPane};
+use super::{Drawable, StatefulPane};
 use crate::{
     models::QueueInfo,
     widgets::{confirmation::ConfirmationBox, help::Help, notif::Notification},
-    DataContainer, Datatable, ManagementClient, Rowable, TabsState,
+    DataContainer, Datatable, ManagementClient, Rowable,
 };
 
 use clipboard::{ClipboardContext, ClipboardProvider};

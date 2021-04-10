@@ -154,7 +154,11 @@ impl Rowable for QueueInfo {
             self.unacked.to_string(),
             self.total.to_string(),
             self.message_stats.ack_details.rate.to_string().to_rate(),
-            self.message_stats.deliver_get_details.rate.to_string().to_rate(),
+            self.message_stats
+                .deliver_get_details
+                .rate
+                .to_string()
+                .to_rate(),
             self.message_stats.ack_details.rate.to_string().to_rate(),
         ]
     }
