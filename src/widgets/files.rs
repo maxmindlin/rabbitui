@@ -71,7 +71,7 @@ impl FileNavigator {
         });
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let t = Table::new(rows)
-            .block(Block::default().borders(Borders::ALL))
+            .block(Block::default().borders(Borders::ALL).title("File-Explorer"))
             .highlight_style(selected_style)
             .highlight_symbol(">> ")
             .widths(&[Constraint::Percentage(100)]);
