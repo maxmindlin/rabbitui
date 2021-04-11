@@ -1,9 +1,11 @@
 use super::{Drawable, StatefulPane};
 use crate::{
     models::QueueInfo,
-    widgets::{confirmation::ConfirmationBox, help::Help, notif::Notification},
+    widgets::{confirmation::ConfirmationBox, help::Help, notif::Notification, files::FileNavigator},
     DataContainer, Datatable, ManagementClient, Rowable,
 };
+
+use std::fs;
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use termion::event::Key;
@@ -27,7 +29,9 @@ Keys:
   - p: drop message into queue from clipboard
   - ctrl + p: pop message from queue onto clipboard
   - d: purge selected queue
-  - return: confirm prompts
+  - return: select
+  - f: open/close file explorer
+  - backspace: go to parent in file explorer
   - ?: close the help menu";
 
 pub struct QueuesPane<'a, M>
@@ -36,6 +40,7 @@ where
 {
     table: Datatable<QueueInfo>,
     confirmation: ConfirmationBox<'a>,
+    explorer: FileNavigator,
     client: &'a M,
     // TODO this should probably be a Rc<RefMut<>>
     // to the parent app. Probably not best
@@ -46,8 +51,10 @@ where
     should_notif_copy: bool,
     should_notif_no_msg: bool,
     should_notif_purged: bool,
+    should_notif_from_file: bool,
     should_show_help: bool,
     should_confirm: bool,
+    should_open_files: bool,
 }
 
 impl<'a, M> QueuesPane<'a, M>
@@ -60,6 +67,7 @@ where
         Self {
             table,
             confirmation: ConfirmationBox::default(),
+            explorer: FileNavigator::default(),
             client,
             // TODO handle unable to make clipboard?
             clipboard: ClipboardProvider::new().unwrap(),
@@ -67,8 +75,10 @@ where
             should_notif_copy: false,
             should_notif_no_msg: false,
             should_notif_purged: false,
+            should_notif_from_file: false,
             should_show_help: false,
             should_confirm: false,
+            should_open_files: false,
         }
     }
 }
@@ -118,16 +128,27 @@ where
         f.render_stateful_widget(t, rects[0], &mut self.table.state);
         if self.should_notif_paste {
             Notification::new("Pasted from clipboard!".to_string()).draw(f, area);
-        } else if self.should_notif_copy {
+        }
+        if self.should_notif_copy {
             Notification::new("Copied to clipboard!".to_string()).draw(f, area);
-        } else if self.should_notif_no_msg {
+        }
+        if self.should_notif_no_msg {
             Notification::new("No messages to copy!".to_string()).draw(f, area);
-        } else if self.should_show_help {
-            Help::new(HELP).draw(f, area);
-        } else if self.should_confirm {
+        }
+        if self.should_confirm {
             self.confirmation.draw(f, area);
-        } else if self.should_notif_purged {
+        }
+        if self.should_notif_purged {
             Notification::new("Queue purged!".to_string()).draw(f, area);
+        }
+        if self.should_open_files {
+            self.explorer.draw(f, area);
+        }
+        if self.should_notif_from_file {
+            Notification::new("Posted from file!".to_string()).draw(f, area);
+        }
+        if self.should_show_help {
+            Help::new(HELP).draw(f, area);
         }
     }
 }
@@ -146,10 +167,13 @@ where
         self.should_notif_paste = false;
         self.should_notif_no_msg = false;
         self.should_notif_purged = false;
+        self.should_notif_from_file = false;
         match key {
             Key::Char('j') => {
                 if self.should_confirm {
                     self.confirmation.next();
+                } else if self.should_open_files {
+                    self.explorer.next();
                 } else {
                     self.table.next();
                 }
@@ -157,6 +181,8 @@ where
             Key::Char('k') => {
                 if self.should_confirm {
                     self.confirmation.previous();
+                } else if self.should_open_files {
+                    self.explorer.previous();
                 } else {
                     self.table.previous();
                 }
@@ -194,6 +220,9 @@ where
                     self.should_confirm = true;
                 }
             }
+            Key::Char('f') => {
+                self.should_open_files = !self.should_open_files;
+            }
             Key::Char('\n') => {
                 if self.should_confirm {
                     // The confirmation box is already open and a
@@ -207,6 +236,26 @@ where
                     }
                     self.confirmation.reset();
                     self.should_confirm = false;
+                } else if self.should_open_files {
+                    if let Some(f) = self.explorer.select() {
+                        if let Some(i) = self.table.state.selected() {
+                            // TODO handle unable to read content
+                            let body = fs::read_to_string(f).unwrap();
+                            let info = &self.table.data.get()[i];
+                            self.client.post_queue_payload(
+                                info.name.clone(),
+                                &info.vhost,
+                                body,
+                            );
+                            self.should_open_files = false;
+                            self.should_notif_from_file = true;
+                        }
+                    }
+                }
+            }
+            Key::Backspace => {
+                if self.should_open_files {
+                    self.explorer.select_parent();
                 }
             }
             Key::Char('?') => {
