@@ -57,7 +57,7 @@ impl FileNavigator {
     }
 
     pub fn draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
-        let pop_area = centered_rect(50, 50, area);
+        let pop_area = centered_rect(50, 55, area);
         let data = self.file_table.data.get();
         let rows = data.iter().map(|f| {
             let style = if f.is_dir() {

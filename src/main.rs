@@ -396,9 +396,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let events = Events::new();
 
     loop {
-        terminal.draw(|f| {
-            app.draw(f);
-        })?;
+        terminal.draw(|f| app.draw(f))?;
 
         match events.next()? {
             Event::Input(key) => match key {
