@@ -1,13 +1,9 @@
-use crate::{
-    views::centered_rect,
-    DataContainer, Datatable, ManagementClient, Rowable,
-};
+use crate::{views::centered_rect, DataContainer, Datatable, ManagementClient, Rowable};
 
 use std::path::PathBuf;
-use std::fs::DirEntry;
+
 use std::fs;
 
-use termion::event::Key;
 use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -24,10 +20,8 @@ pub struct FileNavigator {
 
 fn file_name_helper(f: &PathBuf) -> &str {
     match f.file_name() {
-        Some(n) => {
-            n.to_str().unwrap_or("")
-        }
-        None => ""
+        Some(n) => n.to_str().unwrap_or(""),
+        None => "",
     }
 }
 
@@ -65,17 +59,16 @@ impl FileNavigator {
     pub fn draw<B: Backend>(&mut self, f: &mut Frame<B>, area: Rect) {
         let pop_area = centered_rect(50, 50, area);
         let data = self.file_table.data.get();
-        let rows = data.iter()
-            .map(|f| {
-                let style = if f.is_dir() {
-                    Style::default().fg(Color::Cyan)
-                } else {
-                    Style::default()
-                };
-                let literal = file_name_helper(f).to_string();
-                let cell = vec![Cell::from(literal).style(style)];
-                Row::new(cell).bottom_margin(1)
-            });
+        let rows = data.iter().map(|f| {
+            let style = if f.is_dir() {
+                Style::default().fg(Color::Cyan)
+            } else {
+                Style::default()
+            };
+            let literal = file_name_helper(f).to_string();
+            let cell = vec![Cell::from(literal).style(style)];
+            Row::new(cell).bottom_margin(1)
+        });
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let t = Table::new(rows)
             .block(Block::default().borders(Borders::ALL))

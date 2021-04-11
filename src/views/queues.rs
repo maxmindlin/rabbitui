@@ -1,7 +1,9 @@
 use super::{Drawable, StatefulPane};
 use crate::{
     models::QueueInfo,
-    widgets::{confirmation::ConfirmationBox, help::Help, notif::Notification, files::FileNavigator},
+    widgets::{
+        confirmation::ConfirmationBox, files::FileNavigator, help::Help, notif::Notification,
+    },
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 
@@ -242,11 +244,8 @@ where
                             // TODO handle unable to read content
                             let body = fs::read_to_string(f).unwrap();
                             let info = &self.table.data.get()[i];
-                            self.client.post_queue_payload(
-                                info.name.clone(),
-                                &info.vhost,
-                                body,
-                            );
+                            self.client
+                                .post_queue_payload(info.name.clone(), &info.vhost, body);
                             self.should_open_files = false;
                             self.should_notif_from_file = true;
                         }
