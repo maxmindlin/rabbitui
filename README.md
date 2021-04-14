@@ -5,9 +5,20 @@
 
 `RabbiTui` is a terminal client for the [RabbitMQ Management API](https://www.rabbitmq.com/management.html).
 
-### Usage
+## Installation
+
+### Homebrew
+
+```
+brew tap maxmindlin/rabbitui
+brew install rabbitui
+```
+
+### Building from source
 
 `cargo build --release && ./target/release/rabbitui` builds in release mode and runs the resulting binary.
+
+### Usage
 
 There are a number of cli options for starting up the UI. For help use `./target/release/rabbitui --help`.
 
