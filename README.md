@@ -1,6 +1,6 @@
 <p align="center">
   <h1 align="center">RabbiTui</h1>
-  <p>A terminal client for the RabbitMQ Management API</p>
+  <p align="center">A terminal client for the RabbitMQ Management API</p>
   <img src="./assets/rabbitui.png" alt="Demo on MacOs">
 </p>
 
