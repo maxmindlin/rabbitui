@@ -212,7 +212,5 @@ where
         if let Some(d) = self.data_chan.try_iter().next() {
             self.table.data = DataContainer { entries: d };
         }
-        // let data = self.client.get_exchange_overview();
-        // self.table.data = DataContainer { entries: data };
     }
 }
