@@ -20,8 +20,8 @@ brew install rabbitui
 
 ### Usage
 
-There are a number of cli options for starting up the UI. For help use `./target/release/rabbitui --help`.
+There are a number of cli options for starting up the UI. For help use `rabbitui --help`.
 
 By default, it connects to `http://localhost:15672` with the default credentials. You can change this via cli parameters.
 
-At time in the application you can press `?` to see a help menu for the panel you are in.
+At any time in the application you can press `?` to see a help menu for the panel you are in.
