@@ -2,6 +2,7 @@ use super::{centered_rect, Drawable, StatefulPane};
 use crate::{
     models::{ExchangeBindings, ExchangeInfo},
     widgets::help::Help,
+    config::AppConfig,
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 
@@ -48,7 +49,7 @@ impl<M> ExchangePane<M>
 where
     M: ManagementClient + 'static,
 {
-    pub fn new(client: Arc<M>) -> Self {
+    pub fn new(client: Arc<M>, config: AppConfig) -> Self {
         let data = client.get_exchange_overview();
         let table = Datatable::<ExchangeInfo>::new(data);
 
@@ -59,7 +60,7 @@ where
             if tx.send(d).is_err() {
                 break;
             }
-            thread::sleep(std::time::Duration::from_millis(2_000));
+            thread::sleep(std::time::Duration::from_millis(config.update_rate));
         });
 
         Self {

@@ -5,6 +5,7 @@ use crate::{
         chart::{ChartData, RChart},
         help::Help,
     },
+    config::AppConfig,
     ManagementClient,
 };
 
@@ -58,7 +59,7 @@ impl<M> OverviewPane<M>
 where
     M: ManagementClient + 'static,
 {
-    pub fn new(client: Arc<M>) -> Self {
+    pub fn new(client: Arc<M>, config: AppConfig) -> Self {
         let data = client.get_overview();
         let mut overall = ChartData::default();
         overall.push(data.queue_totals.messages);
@@ -78,7 +79,7 @@ where
             if tx.send(d).is_err() {
                 break;
             }
-            thread::sleep(std::time::Duration::from_millis(2_000));
+            thread::sleep(std::time::Duration::from_millis(config.update_rate));
         });
 
         Self {

@@ -4,6 +4,7 @@ use crate::{
     widgets::{
         confirmation::ConfirmationBox, files::FileNavigator, help::Help, notif::Notification,
     },
+    config::AppConfig,
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 
@@ -68,7 +69,7 @@ impl<'a, M> QueuesPane<'a, M>
 where
     M: ManagementClient + 'static,
 {
-    pub fn new(client: Arc<M>) -> Self {
+    pub fn new(client: Arc<M>, config: AppConfig) -> Self {
         let data = client.get_queues_info();
         let table = Datatable::<QueueInfo>::new(data);
         let (tx, rx) = mpsc::channel();
@@ -78,7 +79,7 @@ where
             if tx.send(d).is_err() {
                 break;
             }
-            thread::sleep(std::time::Duration::from_millis(2_000));
+            thread::sleep(std::time::Duration::from_millis(config.update_rate));
         });
         Self {
             table,

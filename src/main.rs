@@ -3,7 +3,9 @@ mod events;
 mod models;
 mod views;
 mod widgets;
+mod config;
 
+use config::AppConfig;
 use client::Client;
 use events::{Event, Events};
 use models::{ExchangeBindings, ExchangeInfo, MQMessage, Overview, QueueInfo};
@@ -239,14 +241,14 @@ impl<'a, B> App<'a, B>
 where
     B: Backend + 'a,
 {
-    pub fn new<M: ManagementClient + 'static>(client: Arc<M>) -> Self {
+    pub fn new<M: ManagementClient + 'static>(client: Arc<M>, config: AppConfig) -> Self {
         Self {
             manager: TabsManager::new(
                 ["Overview", "Exchanges", "Queues"],
                 [
-                    Box::new(OverviewPane::<M>::new(Arc::clone(&client))),
-                    Box::new(ExchangePane::<M>::new(Arc::clone(&client))),
-                    Box::new(QueuesPane::<'a, M>::new(Arc::clone(&client))),
+                    Box::new(OverviewPane::<M>::new(Arc::clone(&client), config.clone())),
+                    Box::new(ExchangePane::<M>::new(Arc::clone(&client), config.clone())),
+                    Box::new(QueuesPane::<'a, M>::new(Arc::clone(&client), config)),
                 ],
             ),
         }
@@ -382,7 +384,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("Check that the service is running and that creds are correct.");
         return Ok(());
     }
-    let mut app = App::<TBackend>::new::<Client>(Arc::new(c));
+    // TODO allow override this.
+    let config = AppConfig::default();
+    let mut app = App::<TBackend>::new::<Client>(Arc::new(c), config);
     // TODO support different backend for non-MacOs.
     // Just need to swap out Termion based upon some config or compile setting.
     let stdout = io::stdout().into_raw_mode()?;
