@@ -1,11 +1,11 @@
 use super::{Drawable, StatefulPane};
 use crate::{
+    config::AppConfig,
     models::Overview,
     widgets::{
         chart::{ChartData, RChart},
         help::Help,
     },
-    config::AppConfig,
     ManagementClient,
 };
 

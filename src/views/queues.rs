@@ -1,10 +1,10 @@
 use super::{Drawable, StatefulPane};
 use crate::{
+    config::AppConfig,
     models::QueueInfo,
     widgets::{
         confirmation::ConfirmationBox, files::FileNavigator, help::Help, notif::Notification,
     },
-    config::AppConfig,
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 

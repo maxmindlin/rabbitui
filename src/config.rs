@@ -5,8 +5,6 @@ pub struct AppConfig {
 
 impl Default for AppConfig {
     fn default() -> Self {
-        Self {
-            update_rate: 2_000,
-        }
+        Self { update_rate: 2_000 }
     }
 }

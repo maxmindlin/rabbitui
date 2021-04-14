@@ -1,8 +1,8 @@
 use super::{centered_rect, Drawable, StatefulPane};
 use crate::{
+    config::AppConfig,
     models::{ExchangeBindings, ExchangeInfo},
     widgets::help::Help,
-    config::AppConfig,
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 

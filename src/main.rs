@@ -1,12 +1,12 @@
 mod client;
+mod config;
 mod events;
 mod models;
 mod views;
 mod widgets;
-mod config;
 
-use config::AppConfig;
 use client::Client;
+use config::AppConfig;
 use events::{Event, Events};
 use models::{ExchangeBindings, ExchangeInfo, MQMessage, Overview, QueueInfo};
 use views::{
