@@ -11,8 +11,7 @@ use views::{
     exchange::ExchangePane, overview::OverviewPane, queues::QueuesPane, Drawable, StatefulPane,
 };
 
-use std::{error::Error, io, io::Stdout};
-use std::sync::Arc;
+use std::{error::Error, io, io::Stdout, sync::Arc};
 
 use clap::{App as CApp, Arg};
 use termion::{
@@ -223,9 +222,7 @@ where
     /// the panes spawn threads that send to an update channel,
     /// so the point of this is pretty minimal now.
     pub fn update(&mut self) {
-        self.panes
-            .iter_mut()
-            .for_each(|p| p.update());
+        self.panes.iter_mut().for_each(|p| p.update());
     }
 }
 

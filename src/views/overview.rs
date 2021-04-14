@@ -1,16 +1,17 @@
 use super::{Drawable, StatefulPane};
 use crate::{
+    models::Overview,
     widgets::{
         chart::{ChartData, RChart},
         help::Help,
     },
-    models::Overview,
     ManagementClient,
 };
 
-use std::sync::mpsc;
-use std::sync::Arc;
-use std::thread;
+use std::{
+    sync::{mpsc, Arc},
+    thread,
+};
 
 use termion::event::Key;
 use tui::{

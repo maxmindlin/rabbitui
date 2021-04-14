@@ -5,10 +5,10 @@ use crate::{
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 
-use std::fs;
-use std::sync::mpsc;
-use std::sync::Arc;
-use std::thread;
+use std::{
+    sync::{mpsc, Arc},
+    thread,
+};
 
 use termion::event::Key;
 use tui::{

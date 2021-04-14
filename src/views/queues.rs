@@ -7,10 +7,11 @@ use crate::{
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 
-use std::fs;
-use std::sync::mpsc;
-use std::sync::Arc;
-use std::thread;
+use std::{
+    fs,
+    sync::{mpsc, Arc},
+    thread,
+};
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use termion::event::Key;
