@@ -8,15 +8,17 @@ use crate::{
 };
 
 use std::fs;
+use std::sync::mpsc;
+use std::sync::Arc;
+use std::thread;
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use termion::event::Key;
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
-    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
+    widgets::{Block, Borders, Cell, Row, Table},
     Frame,
 };
 
@@ -42,8 +44,10 @@ where
 {
     table: Datatable<QueueInfo>,
     confirmation: ConfirmationBox<'a>,
+    data_chan: mpsc::Receiver<Vec<QueueInfo>>,
+    data_handle: thread::JoinHandle<()>,
     explorer: FileNavigator,
-    client: &'a M,
+    client: Arc<M>,
     // TODO this should probably be a Rc<RefMut<>>
     // to the parent app. Probably not best
     // for an indv pane to have a clipboard context
@@ -61,16 +65,27 @@ where
 
 impl<'a, M> QueuesPane<'a, M>
 where
-    M: ManagementClient,
+    M: ManagementClient + 'static,
 {
-    pub fn new(client: &'a M) -> Self {
+    pub fn new(client: Arc<M>) -> Self {
         let data = client.get_queues_info();
         let table = Datatable::<QueueInfo>::new(data);
+        let (tx, rx) = mpsc::channel();
+        let c = Arc::clone(&client);
+        let handler = thread::spawn(move || loop {
+            let d = c.get_queues_info();
+            if tx.send(d).is_err() {
+                break;
+            }
+            thread::sleep(std::time::Duration::from_millis(2_000));
+        });
         Self {
             table,
             confirmation: ConfirmationBox::default(),
             explorer: FileNavigator::default(),
-            client,
+            data_chan: rx,
+            data_handle: handler,
+            client: Arc::clone(&client),
             // TODO handle unable to make clipboard?
             clipboard: ClipboardProvider::new().unwrap(),
             should_notif_paste: false,
@@ -160,10 +175,6 @@ where
     M: ManagementClient,
     B: Backend,
 {
-    fn update_in_background(&self) -> bool {
-        false
-    }
-
     fn handle_key(&mut self, key: Key) {
         self.should_notif_copy = false;
         self.should_notif_paste = false;
@@ -265,7 +276,8 @@ where
     }
 
     fn update(&mut self) {
-        let new_data = self.client.get_queues_info();
-        self.table.data = DataContainer { entries: new_data };
+        if let Some(d) = self.data_chan.try_iter().next() {
+            self.table.data = DataContainer { entries: d };
+        }
     }
 }

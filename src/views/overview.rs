@@ -4,8 +4,13 @@ use crate::{
         chart::{ChartData, RChart},
         help::Help,
     },
+    models::Overview,
     ManagementClient,
 };
+
+use std::sync::mpsc;
+use std::sync::Arc;
+use std::thread;
 
 use termion::event::Key;
 use tui::{
@@ -36,21 +41,23 @@ struct OverviewData {
     disk_write_rate: ChartData,
 }
 
-pub struct OverviewPane<'a, M>
+pub struct OverviewPane<M>
 where
     M: ManagementClient,
 {
     data: OverviewData,
-    client: &'a M,
+    data_chan: mpsc::Receiver<Overview>,
+    data_handle: thread::JoinHandle<()>,
+    client: Arc<M>,
     counter: f64,
     should_show_help: bool,
 }
 
-impl<'a, M> OverviewPane<'a, M>
+impl<M> OverviewPane<M>
 where
-    M: ManagementClient,
+    M: ManagementClient + 'static,
 {
-    pub fn new(client: &'a M) -> Self {
+    pub fn new(client: Arc<M>) -> Self {
         let data = client.get_overview();
         let mut overall = ChartData::default();
         overall.push(data.queue_totals.messages);
@@ -62,9 +69,22 @@ where
         disk_read_rate.push(data.message_stats.disk_reads_details.rate);
         let mut disk_write_rate = ChartData::default();
         disk_write_rate.push(data.message_stats.disk_writes_details.rate);
+
+        let c = Arc::clone(&client);
+        let (tx, rx) = mpsc::channel();
+        let handler = thread::spawn(move || loop {
+            let d = c.get_overview();
+            if tx.send(d).is_err() {
+                break;
+            }
+            thread::sleep(std::time::Duration::from_millis(2_000));
+        });
+
         Self {
-            client,
+            client: Arc::clone(&client),
             counter: 0.,
+            data_chan: rx,
+            data_handle: handler,
             data: OverviewData {
                 overall,
                 ready,
@@ -137,9 +157,9 @@ where
     }
 }
 
-impl<M, B> Drawable<B> for OverviewPane<'_, M>
+impl<M, B> Drawable<B> for OverviewPane<M>
 where
-    M: ManagementClient,
+    M: ManagementClient + 'static,
     B: Backend,
 {
     fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
@@ -166,15 +186,11 @@ where
     }
 }
 
-impl<M, B> StatefulPane<B> for OverviewPane<'_, M>
+impl<M, B> StatefulPane<B> for OverviewPane<M>
 where
     B: Backend,
-    M: ManagementClient,
+    M: ManagementClient + 'static,
 {
-    fn update_in_background(&self) -> bool {
-        true
-    }
-
     fn handle_key(&mut self, key: Key) {
         match key {
             Key::Char('?') => {
@@ -185,16 +201,17 @@ where
     }
 
     fn update(&mut self) {
-        let update = self.client.get_overview();
-        self.counter += 1.0;
-        self.data.ready.push(update.queue_totals.messages_ready);
-        self.data.overall.push(update.queue_totals.messages);
-        self.data.unacked.push(update.queue_totals.messages_unacked);
-        self.data
-            .disk_write_rate
-            .push(update.message_stats.disk_writes_details.rate);
-        self.data
-            .disk_read_rate
-            .push(update.message_stats.disk_reads_details.rate);
+        if let Some(update) = self.data_chan.try_iter().next() {
+            self.counter += 1.0;
+            self.data.ready.push(update.queue_totals.messages_ready);
+            self.data.overall.push(update.queue_totals.messages);
+            self.data.unacked.push(update.queue_totals.messages_unacked);
+            self.data
+                .disk_write_rate
+                .push(update.message_stats.disk_writes_details.rate);
+            self.data
+                .disk_read_rate
+                .push(update.message_stats.disk_reads_details.rate);
+        }
     }
 }

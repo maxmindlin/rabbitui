@@ -12,6 +12,7 @@ use views::{
 };
 
 use std::{error::Error, io, io::Stdout};
+use std::sync::Arc;
 
 use clap::{App as CApp, Arg};
 use termion::{
@@ -45,7 +46,7 @@ type TBackend = TermionBackend<AlternateScreen<MouseTerminal<RawTerminal<Stdout>
 /// data access trait for the RabbitMQ
 /// Management API. Implemented by any
 /// struct used for the app data backend.
-pub trait ManagementClient {
+pub trait ManagementClient: Send + Sync {
     fn get_exchange_overview(&self) -> Vec<ExchangeInfo>;
     fn get_exchange_bindings(&self, exch: &ExchangeInfo) -> Vec<ExchangeBindings>;
     fn get_overview(&self) -> Overview;
@@ -216,16 +217,15 @@ where
 
     /// Contains the logic for updating all the panes that
     /// "should" be updated upon the state provided by
-    /// the panes themselves. Ie, update the active pane,
-    /// and then update any panes that should be updated in
-    /// the background.
+    /// the panes themselves.
+    ///
+    /// TODO this isnt really that relevant anymore since
+    /// the panes spawn threads that send to an update channel,
+    /// so the point of this is pretty minimal now.
     pub fn update(&mut self) {
-        let active = self.curr();
         self.panes
             .iter_mut()
-            .enumerate()
-            .filter(|(i, p)| *i == active || p.update_in_background())
-            .for_each(|(_, p)| p.update());
+            .for_each(|p| p.update());
     }
 }
 
@@ -242,14 +242,14 @@ impl<'a, B> App<'a, B>
 where
     B: Backend + 'a,
 {
-    pub fn new<M: ManagementClient>(client: &'a M) -> Self {
+    pub fn new<M: ManagementClient + 'static>(client: Arc<M>) -> Self {
         Self {
             manager: TabsManager::new(
                 ["Overview", "Exchanges", "Queues"],
                 [
-                    Box::new(OverviewPane::<'a, M>::new(&client)),
-                    Box::new(ExchangePane::<'a, M>::new(&client)),
-                    Box::new(QueuesPane::<'a, M>::new(&client)),
+                    Box::new(OverviewPane::<M>::new(Arc::clone(&client))),
+                    Box::new(ExchangePane::<M>::new(Arc::clone(&client))),
+                    Box::new(QueuesPane::<'a, M>::new(Arc::clone(&client))),
                 ],
             ),
         }
@@ -385,7 +385,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("Check that the service is running and that creds are correct.");
         return Ok(());
     }
-    let mut app = App::<TBackend>::new::<Client>(&c);
+    let mut app = App::<TBackend>::new::<Client>(Arc::new(c));
     // TODO support different backend for non-MacOs.
     // Just need to swap out Termion based upon some config or compile setting.
     let stdout = io::stdout().into_raw_mode()?;

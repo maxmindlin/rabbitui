@@ -5,6 +5,11 @@ use crate::{
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 
+use std::fs;
+use std::sync::mpsc;
+use std::sync::Arc;
+use std::thread;
+
 use termion::event::Key;
 use tui::{
     backend::Backend,
@@ -25,32 +30,47 @@ Keys:
   - return: open/close drilldown for selected exchange
   - ?: close the help menu";
 
-pub struct ExchangePane<'a, M>
+pub struct ExchangePane<M>
 where
     M: ManagementClient,
 {
     table: Datatable<ExchangeInfo>,
     bindings_table: Datatable<ExchangeBindings>,
+    data_chan: mpsc::Receiver<Vec<ExchangeInfo>>,
+    data_handle: thread::JoinHandle<()>,
     should_fetch_bindings: bool,
     should_draw_popout: bool,
     should_show_help: bool,
-    client: &'a M,
+    client: Arc<M>,
 }
 
-impl<'a, M> ExchangePane<'a, M>
+impl<M> ExchangePane<M>
 where
-    M: ManagementClient,
+    M: ManagementClient + 'static,
 {
-    pub fn new(client: &'a M) -> Self {
+    pub fn new(client: Arc<M>) -> Self {
         let data = client.get_exchange_overview();
         let table = Datatable::<ExchangeInfo>::new(data);
+
+        let (tx, rx) = mpsc::channel();
+        let c = Arc::clone(&client);
+        let handler = thread::spawn(move || loop {
+            let d = c.get_exchange_overview();
+            if tx.send(d).is_err() {
+                break;
+            }
+            thread::sleep(std::time::Duration::from_millis(2_000));
+        });
+
         Self {
             table,
+            data_chan: rx,
+            data_handle: handler,
             bindings_table: Datatable::default(),
             should_fetch_bindings: false,
             should_draw_popout: false,
             should_show_help: false,
-            client,
+            client: Arc::clone(&client),
         }
     }
 
@@ -102,9 +122,9 @@ where
     }
 }
 
-impl<M, B> Drawable<B> for ExchangePane<'_, M>
+impl<M, B> Drawable<B> for ExchangePane<M>
 where
-    M: ManagementClient,
+    M: ManagementClient + 'static,
     B: Backend,
 {
     fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
@@ -164,15 +184,11 @@ where
     }
 }
 
-impl<M, B> StatefulPane<B> for ExchangePane<'_, M>
+impl<M, B> StatefulPane<B> for ExchangePane<M>
 where
-    M: ManagementClient,
+    M: ManagementClient + 'static,
     B: Backend,
 {
-    fn update_in_background(&self) -> bool {
-        false
-    }
-
     fn handle_key(&mut self, key: Key) {
         match key {
             Key::Char('j') => {
@@ -193,7 +209,10 @@ where
     }
 
     fn update(&mut self) {
-        let data = self.client.get_exchange_overview();
-        self.table.data = DataContainer { entries: data };
+        if let Some(d) = self.data_chan.try_iter().next() {
+            self.table.data = DataContainer { entries: d };
+        }
+        // let data = self.client.get_exchange_overview();
+        // self.table.data = DataContainer { entries: data };
     }
 }

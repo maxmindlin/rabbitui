@@ -25,7 +25,6 @@ pub trait StatefulPane<B>: Drawable<B>
 where
     B: Backend,
 {
-    fn update_in_background(&self) -> bool;
     fn handle_key(&mut self, key: Key);
     fn update(&mut self);
 }
