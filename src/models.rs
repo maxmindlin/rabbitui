@@ -28,13 +28,24 @@ pub struct ExchangeInfo {
     pub name: String,
     #[serde(alias = "type")]
     pub t: String,
+    #[serde(default)]
+    pub message_stats: ExchangeMsgStats,
     pub user_who_performed_action: String,
     pub vhost: String,
 }
 
+#[derive(Deserialize, Debug, Default)]
+#[serde(default)]
+pub struct ExchangeMsgStats {
+    #[serde(alias = "publish_in_details")]
+    pub in_rate: RateContainer,
+    #[serde(alias = "publish_out_details")]
+    pub out_rate: RateContainer,
+}
+
 impl ExchangeInfo {
-    pub fn headers<'a>() -> [&'a str; 2] {
-        ["Name", "Type"]
+    pub fn headers<'a>() -> [&'a str; 4] {
+        ["Name", "Type", "Rate In", "Rate Out"]
     }
 }
 
@@ -46,7 +57,12 @@ impl Rowable for ExchangeInfo {
             self.name.clone()
         };
 
-        vec![nice_name, self.t.clone()]
+        vec![
+            nice_name,
+            self.t.clone(),
+            self.message_stats.in_rate.rate.to_string().to_rate(),
+            self.message_stats.out_rate.rate.to_string().to_rate(),
+        ]
     }
 }
 

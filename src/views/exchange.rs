@@ -141,9 +141,10 @@ where
             .highlight_style(selected_style)
             .highlight_symbol(">> ")
             .widths(&[
-                Constraint::Percentage(50),
-                Constraint::Length(30),
-                Constraint::Max(10),
+                Constraint::Percentage(40),
+                Constraint::Percentage(30),
+                Constraint::Percentage(15),
+                Constraint::Percentage(15),
             ]);
         f.render_stateful_widget(t, rects[0], &mut self.table.state);
         if self.should_draw_popout {
