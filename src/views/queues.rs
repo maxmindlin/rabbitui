@@ -64,7 +64,7 @@ where
 
 impl<'a, M> QueuesPane<'a, M>
 where
-    M: ManagementClient + 'static,
+    M: ManagementClient,
 {
     pub fn new(client: Arc<M>, data_chan: mpsc::Receiver<Vec<QueueInfo>>) -> Self {
         let data = client.get_queues_info();

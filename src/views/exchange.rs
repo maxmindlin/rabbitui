@@ -42,7 +42,7 @@ where
 
 impl<M> ExchangePane<M>
 where
-    M: ManagementClient + 'static,
+    M: ManagementClient,
 {
     pub fn new(client: Arc<M>, data_chan: mpsc::Receiver<Vec<ExchangeInfo>>) -> Self {
         let data = client.get_exchange_overview();
@@ -108,7 +108,7 @@ where
 
 impl<M, B> Drawable<B> for ExchangePane<M>
 where
-    M: ManagementClient + 'static,
+    M: ManagementClient,
     B: Backend,
 {
     fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
@@ -170,7 +170,7 @@ where
 
 impl<M, B> StatefulPane<B> for ExchangePane<M>
 where
-    M: ManagementClient + 'static,
+    M: ManagementClient,
     B: Backend,
 {
     fn handle_key(&mut self, key: Key) {
