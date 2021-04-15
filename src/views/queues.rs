@@ -1,6 +1,5 @@
 use super::{Drawable, StatefulPane};
 use crate::{
-    config::AppConfig,
     models::QueueInfo,
     widgets::{
         confirmation::ConfirmationBox, files::FileNavigator, help::Help, notif::Notification,
@@ -11,7 +10,6 @@ use crate::{
 use std::{
     fs,
     sync::{mpsc, Arc},
-    thread,
 };
 
 use clipboard::{ClipboardContext, ClipboardProvider};
@@ -47,7 +45,6 @@ where
     table: Datatable<QueueInfo>,
     confirmation: ConfirmationBox<'a>,
     data_chan: mpsc::Receiver<Vec<QueueInfo>>,
-    data_handle: thread::JoinHandle<()>,
     explorer: FileNavigator,
     client: Arc<M>,
     // TODO this should probably be a Rc<RefMut<>>
@@ -69,24 +66,14 @@ impl<'a, M> QueuesPane<'a, M>
 where
     M: ManagementClient + 'static,
 {
-    pub fn new(client: Arc<M>, config: AppConfig) -> Self {
+    pub fn new(client: Arc<M>, data_chan: mpsc::Receiver<Vec<QueueInfo>>) -> Self {
         let data = client.get_queues_info();
         let table = Datatable::<QueueInfo>::new(data);
-        let (tx, rx) = mpsc::channel();
-        let c = Arc::clone(&client);
-        let handler = thread::spawn(move || loop {
-            let d = c.get_queues_info();
-            if tx.send(d).is_err() {
-                break;
-            }
-            thread::sleep(std::time::Duration::from_millis(config.update_rate));
-        });
         Self {
             table,
             confirmation: ConfirmationBox::default(),
             explorer: FileNavigator::default(),
-            data_chan: rx,
-            data_handle: handler,
+            data_chan,
             client: Arc::clone(&client),
             // TODO handle unable to make clipboard?
             clipboard: ClipboardProvider::new().unwrap(),

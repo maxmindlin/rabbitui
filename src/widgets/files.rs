@@ -1,4 +1,4 @@
-use crate::{views::centered_rect, DataContainer, Datatable, ManagementClient, Rowable};
+use crate::{views::centered_rect, Datatable};
 
 use std::path::PathBuf;
 
@@ -6,10 +6,9 @@ use std::fs;
 
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
-    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
+    widgets::{Block, Borders, Cell, Clear, Row, Table},
     Frame,
 };
 

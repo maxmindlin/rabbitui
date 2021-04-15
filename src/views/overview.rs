@@ -1,6 +1,5 @@
 use super::{Drawable, StatefulPane};
 use crate::{
-    config::AppConfig,
     models::Overview,
     widgets::{
         chart::{ChartData, RChart},
@@ -9,10 +8,7 @@ use crate::{
     ManagementClient,
 };
 
-use std::{
-    sync::{mpsc, Arc},
-    thread,
-};
+use std::sync::{mpsc, Arc};
 
 use termion::event::Key;
 use tui::{
@@ -43,23 +39,18 @@ struct OverviewData {
     disk_write_rate: ChartData,
 }
 
-pub struct OverviewPane<M>
-where
-    M: ManagementClient,
-{
+pub struct OverviewPane {
     data: OverviewData,
     data_chan: mpsc::Receiver<Overview>,
-    data_handle: thread::JoinHandle<()>,
-    client: Arc<M>,
     counter: f64,
     should_show_help: bool,
 }
 
-impl<M> OverviewPane<M>
-where
-    M: ManagementClient + 'static,
-{
-    pub fn new(client: Arc<M>, config: AppConfig) -> Self {
+impl OverviewPane {
+    pub fn new<M>(client: Arc<M>, data_chan: mpsc::Receiver<Overview>) -> Self
+    where
+        M: ManagementClient,
+    {
         let data = client.get_overview();
         let mut overall = ChartData::default();
         overall.push(data.queue_totals.messages);
@@ -71,22 +62,9 @@ where
         disk_read_rate.push(data.message_stats.disk_reads_details.rate);
         let mut disk_write_rate = ChartData::default();
         disk_write_rate.push(data.message_stats.disk_writes_details.rate);
-
-        let c = Arc::clone(&client);
-        let (tx, rx) = mpsc::channel();
-        let handler = thread::spawn(move || loop {
-            let d = c.get_overview();
-            if tx.send(d).is_err() {
-                break;
-            }
-            thread::sleep(std::time::Duration::from_millis(config.update_rate));
-        });
-
         Self {
-            client: Arc::clone(&client),
             counter: 0.,
-            data_chan: rx,
-            data_handle: handler,
+            data_chan,
             data: OverviewData {
                 overall,
                 ready,
@@ -159,9 +137,8 @@ where
     }
 }
 
-impl<M, B> Drawable<B> for OverviewPane<M>
+impl<B> Drawable<B> for OverviewPane
 where
-    M: ManagementClient + 'static,
     B: Backend,
 {
     fn draw(&mut self, f: &mut Frame<B>, area: Rect) {
@@ -188,10 +165,9 @@ where
     }
 }
 
-impl<M, B> StatefulPane<B> for OverviewPane<M>
+impl<B> StatefulPane<B> for OverviewPane
 where
     B: Backend,
-    M: ManagementClient + 'static,
 {
     fn handle_key(&mut self, key: Key) {
         match key {

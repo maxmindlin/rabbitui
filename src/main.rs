@@ -9,11 +9,16 @@ use client::Client;
 use config::AppConfig;
 use events::{Event, Events};
 use models::{ExchangeBindings, ExchangeInfo, MQMessage, Overview, QueueInfo};
-use views::{
-    exchange::ExchangePane, overview::OverviewPane, queues::QueuesPane, Drawable, StatefulPane,
-};
+use views::{exchange::ExchangePane, overview::OverviewPane, queues::QueuesPane, StatefulPane};
 
-use std::{error::Error, io, io::Stdout, sync::Arc};
+use std::{
+    error::Error,
+    io,
+    io::Stdout,
+    sync::{mpsc, Arc},
+    thread,
+    time::Duration,
+};
 
 use clap::{App as CApp, Arg};
 use termion::{
@@ -242,13 +247,34 @@ where
     B: Backend + 'a,
 {
     pub fn new<M: ManagementClient + 'static>(client: Arc<M>, config: AppConfig) -> Self {
+        let thread_client = Arc::clone(&client);
+        let (overview_tx, overview_rx) = mpsc::channel();
+        let (exchange_tx, exchange_rx) = mpsc::channel();
+        let (queue_tx, queue_rx) = mpsc::channel();
+        // Create data thread. Responsible for gathering new data points
+        // and sending to existing receivers.
+        thread::spawn(move || loop {
+            let overview_data = thread_client.get_overview();
+            if overview_tx.send(overview_data).is_err() {
+                break;
+            }
+            let exchange_data = thread_client.get_exchange_overview();
+            if exchange_tx.send(exchange_data).is_err() {
+                break;
+            }
+            let queue_data = thread_client.get_queues_info();
+            if queue_tx.send(queue_data).is_err() {
+                break;
+            }
+            thread::sleep(Duration::from_millis(config.update_rate));
+        });
         Self {
             manager: TabsManager::new(
                 ["Overview", "Exchanges", "Queues"],
                 [
-                    Box::new(OverviewPane::<M>::new(Arc::clone(&client), config.clone())),
-                    Box::new(ExchangePane::<M>::new(Arc::clone(&client), config.clone())),
-                    Box::new(QueuesPane::<'a, M>::new(Arc::clone(&client), config)),
+                    Box::new(OverviewPane::new(Arc::clone(&client), overview_rx)),
+                    Box::new(ExchangePane::<M>::new(Arc::clone(&client), exchange_rx)),
+                    Box::new(QueuesPane::<'a, M>::new(Arc::clone(&client), queue_rx)),
                 ],
             ),
         }

@@ -1,9 +1,4 @@
-use crate::{
-    models::QueueInfo,
-    views::centered_rect,
-    widgets::{help::Help, notif::Notification},
-    DataContainer, Datatable, ManagementClient, Rowable, TabsState,
-};
+use crate::{views::centered_rect, Datatable};
 
 use tui::{
     backend::Backend,

@@ -8,6 +8,7 @@ use crate::{
 
 use serde::{de::DeserializeOwned, Serialize};
 
+#[allow(dead_code)] // we dont use all variants yet, but we might
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum Ackmode {

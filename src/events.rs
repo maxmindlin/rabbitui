@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // Taken from
 // https://github.com/fdehau/tui-rs/blob/master/examples/util/event.rs
 use std::{
@@ -36,7 +37,7 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             exit_key: Key::Char('q'),
-            tick_rate: Duration::from_millis(1_000),
+            tick_rate: Duration::from_millis(500),
         }
     }
 }

@@ -1,10 +1,10 @@
 use crate::views::centered_rect;
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
-    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
+    layout::Rect,
+    style::{Color, Style},
+    text::{Span, Text},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
 

@@ -1,15 +1,11 @@
 use super::{centered_rect, Drawable, StatefulPane};
 use crate::{
-    config::AppConfig,
     models::{ExchangeBindings, ExchangeInfo},
     widgets::help::Help,
     DataContainer, Datatable, ManagementClient, Rowable,
 };
 
-use std::{
-    sync::{mpsc, Arc},
-    thread,
-};
+use std::sync::{mpsc, Arc};
 
 use termion::event::Key;
 use tui::{
@@ -38,7 +34,6 @@ where
     table: Datatable<ExchangeInfo>,
     bindings_table: Datatable<ExchangeBindings>,
     data_chan: mpsc::Receiver<Vec<ExchangeInfo>>,
-    data_handle: thread::JoinHandle<()>,
     should_fetch_bindings: bool,
     should_draw_popout: bool,
     should_show_help: bool,
@@ -49,24 +44,12 @@ impl<M> ExchangePane<M>
 where
     M: ManagementClient + 'static,
 {
-    pub fn new(client: Arc<M>, config: AppConfig) -> Self {
+    pub fn new(client: Arc<M>, data_chan: mpsc::Receiver<Vec<ExchangeInfo>>) -> Self {
         let data = client.get_exchange_overview();
         let table = Datatable::<ExchangeInfo>::new(data);
-
-        let (tx, rx) = mpsc::channel();
-        let c = Arc::clone(&client);
-        let handler = thread::spawn(move || loop {
-            let d = c.get_exchange_overview();
-            if tx.send(d).is_err() {
-                break;
-            }
-            thread::sleep(std::time::Duration::from_millis(config.update_rate));
-        });
-
         Self {
             table,
-            data_chan: rx,
-            data_handle: handler,
+            data_chan,
             bindings_table: Datatable::default(),
             should_fetch_bindings: false,
             should_draw_popout: false,
