@@ -22,8 +22,8 @@ use tui::{
     Frame,
 };
 
-const HELP: &str = "The Queues tab is where you can view information on
-existing queues.
+const HELP: &str = "The Queues tab is where you can view information \
+on existing queues.
 
 Keys:
   - h: previous tab

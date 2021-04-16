@@ -20,8 +20,9 @@ use tui::{
     Frame,
 };
 
-const HELP: &str = "Welcome to RabbiTui! The help displayed
-here is relevant to the Overview tab. Every help panel will be specific to the tab you are in.
+const HELP: &str = "Welcome to RabbiTui! The help displayed \
+here is relevant to the Overview tab. Every help panel will \
+be specific to the tab you are in.
 
 The overview pane shows high level throughput analytics.
 

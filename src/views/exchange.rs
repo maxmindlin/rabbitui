@@ -16,7 +16,7 @@ use tui::{
     Frame,
 };
 
-const HELP: &str = "The Exchanges tab is where you view
+const HELP: &str = "The Exchanges tab is where you view \
 all existing exchanges with drilldown information.
 
 Keys:
