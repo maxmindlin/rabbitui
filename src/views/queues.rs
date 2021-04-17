@@ -52,11 +52,7 @@ where
     // for an indv pane to have a clipboard context
     // when there is only 1 system clipboard..
     clipboard: ClipboardContext,
-    should_notif_paste: bool,
-    should_notif_copy: bool,
-    should_notif_no_msg: bool,
-    should_notif_purged: bool,
-    should_notif_from_file: bool,
+    notif: Option<Notification>,
     should_show_help: bool,
     should_confirm: bool,
     should_open_files: bool,
@@ -73,15 +69,11 @@ where
             table,
             confirmation: ConfirmationBox::default(),
             explorer: FileNavigator::default(),
+            notif: None,
             data_chan,
             client: Arc::clone(&client),
             // TODO handle unable to make clipboard?
             clipboard: ClipboardProvider::new().unwrap(),
-            should_notif_paste: false,
-            should_notif_copy: false,
-            should_notif_no_msg: false,
-            should_notif_purged: false,
-            should_notif_from_file: false,
             should_show_help: false,
             should_confirm: false,
             should_open_files: false,
@@ -132,26 +124,14 @@ where
                 Constraint::Percentage(10),
             ]);
         f.render_stateful_widget(t, rects[0], &mut self.table.state);
-        if self.should_notif_paste {
-            Notification::new("Pasted from clipboard!".to_string()).draw(f, area);
-        }
-        if self.should_notif_copy {
-            Notification::new("Copied to clipboard!".to_string()).draw(f, area);
-        }
-        if self.should_notif_no_msg {
-            Notification::new("No messages to copy!".to_string()).draw(f, area);
+        if let Some(n) = &self.notif {
+            n.draw(f, area);
         }
         if self.should_confirm {
             self.confirmation.draw(f, area);
         }
-        if self.should_notif_purged {
-            Notification::new("Queue purged!".to_string()).draw(f, area);
-        }
         if self.should_open_files {
             self.explorer.draw(f, area);
-        }
-        if self.should_notif_from_file {
-            Notification::new("Posted from file!".to_string()).draw(f, area);
         }
         if self.should_show_help {
             Help::new(HELP).draw(f, area);
@@ -165,11 +145,7 @@ where
     B: Backend,
 {
     fn handle_key(&mut self, key: Key) {
-        self.should_notif_copy = false;
-        self.should_notif_paste = false;
-        self.should_notif_no_msg = false;
-        self.should_notif_purged = false;
-        self.should_notif_from_file = false;
+        self.notif = None;
         match key {
             Key::Char('j') => {
                 if self.should_confirm {
@@ -199,7 +175,7 @@ where
                         &queue_info.vhost,
                         body,
                     );
-                    self.should_notif_paste = true;
+                    self.notif = Some(Notification::new("Pasted from clipboard!".to_string()));
                 }
             }
             Key::Ctrl('p') => {
@@ -209,10 +185,10 @@ where
                     match res {
                         Some(m) => {
                             self.clipboard.set_contents(m.payload).unwrap();
-                            self.should_notif_copy = true;
+                            self.notif = Some(Notification::new("Copied to clipboard!".to_string()));
                         }
                         None => {
-                            self.should_notif_no_msg = true;
+                            self.notif = Some(Notification::new("No messages to copy!".to_string()));
                         }
                     }
                 }
@@ -233,7 +209,7 @@ where
                         if let Some(i) = self.table.state.selected() {
                             let info = &self.table.data.get()[i];
                             self.client.purge_queue(&info.name, &info.vhost);
-                            self.should_notif_purged = true;
+                            self.notif = Some(Notification::new("Queue purged!".to_string()));
                         }
                     }
                     self.confirmation.reset();
@@ -247,7 +223,7 @@ where
                             self.client
                                 .post_queue_payload(info.name.clone(), &info.vhost, body);
                             self.should_open_files = false;
-                            self.should_notif_from_file = true;
+                            self.notif = Some(Notification::new("Posted from file!".to_string()));
                         }
                     }
                 }
