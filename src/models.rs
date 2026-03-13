@@ -132,6 +132,8 @@ pub struct QueueInfo {
     pub unacked: u64,
     #[serde(alias = "messages")]
     pub total: u64,
+    #[serde(default)]
+    pub consumers: u64,
     pub vhost: String,
 }
 
