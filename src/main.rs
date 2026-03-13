@@ -12,7 +12,9 @@ use models::{ExchangeBindings, ExchangeInfo, MQMessage, Overview, QueueInfo};
 use views::{exchange::ExchangePane, overview::OverviewPane, queues::QueuesPane, StatefulPane};
 
 use std::{
+    collections::HashMap,
     error::Error,
+    fs,
     io,
     io::Stdout,
     sync::{mpsc, Arc},
@@ -367,6 +369,118 @@ where
     }
 }
 
+/// Load baseline delivered counts from a file.
+/// Format: one "queue_name=count" per line.
+fn load_baseline(path: &str) -> HashMap<String, u64> {
+    let mut map = HashMap::new();
+    if let Ok(contents) = fs::read_to_string(path) {
+        for line in contents.lines() {
+            if let Some((name, val)) = line.split_once('=') {
+                if let Ok(n) = val.parse::<u64>() {
+                    map.insert(name.to_string(), n);
+                }
+            }
+        }
+    }
+    map
+}
+
+/// Save current delivered counts as baseline.
+fn save_baseline(path: &str, queues: &[QueueInfo]) {
+    let lines: Vec<String> = queues
+        .iter()
+        .map(|q| format!("{}={}", q.name, q.message_stats.deliver_get))
+        .collect();
+    let _ = fs::write(path, lines.join("\n"));
+}
+
+/// Prints a row for a known queue.
+fn print_queue_row(q: &QueueInfo, name_w: usize, baseline: &HashMap<String, u64>) {
+    let in_rate = q.message_stats.publish_details.rate;
+    let out_rate = q.message_stats.deliver_get_details.rate;
+    let base = baseline.get(&q.name).copied().unwrap_or(0);
+    let delivered = q.message_stats.deliver_get.saturating_sub(base);
+    println!(
+        "  {:<nw$}  {:>5}  {:>6}  {:>5}  {:>9}  {:>4}  {:>8.1}  {:>8.1}",
+        q.name, q.ready, q.unacked, q.total,
+        delivered, q.consumers, in_rate, out_rate,
+        nw = name_w
+    );
+}
+
+/// Prints a placeholder row for a queue not found in RabbitMQ.
+fn print_missing_row(name: &str, name_w: usize) {
+    println!(
+        "  {:<nw$}  {:>5}  {:>6}  {:>5}  {:>9}  {:>4}  {:>8}  {:>8}",
+        name, "-", "-", "-", "-", "-", "-", "-",
+        nw = name_w
+    );
+}
+
+/// Prints the table header.
+fn print_snapshot_header(name_w: usize) {
+    println!(
+        "  {:<nw$}  {:>5}  {:>6}  {:>5}  {:>9}  {:>4}  {:>8}  {:>8}",
+        "QUEUE", "READY", "UNACKD", "TOTAL", "DELIVERED", "CONS", "IN/s", "OUT/s",
+        nw = name_w
+    );
+    println!(
+        "  {:<nw$}  {:>5}  {:>6}  {:>5}  {:>9}  {:>4}  {:>8}  {:>8}",
+        "-".repeat(name_w), "-----", "------", "-----", "---------", "----", "--------", "--------",
+        nw = name_w
+    );
+}
+
+/// Print a one-shot table of queue states to stdout and exit.
+/// If baseline_path is provided, on first run (file missing) saves current
+/// delivered counts and shows 0. On subsequent runs shows delta from baseline.
+fn print_snapshot(client: &Client, filter: Option<&str>, baseline_path: Option<&str>) {
+    let queues = client.get_queues_info();
+
+    // Handle baseline: load or create
+    let baseline = if let Some(path) = baseline_path {
+        let existing = load_baseline(path);
+        if existing.is_empty() {
+            // First call — save current state as baseline
+            save_baseline(path, &queues);
+            // Return current counts so delivered shows as 0
+            queues
+                .iter()
+                .map(|q| (q.name.clone(), q.message_stats.deliver_get))
+                .collect()
+        } else {
+            existing
+        }
+    } else {
+        HashMap::new()
+    };
+
+    if let Some(f) = filter {
+        let names: Vec<&str> = f.split(',').map(|s| s.trim()).collect();
+        let name_w = names.iter().map(|n| n.len()).max().unwrap_or(5).max(5);
+        print_snapshot_header(name_w);
+        for name in &names {
+            if let Some(q) = queues.iter().find(|q| q.name == *name) {
+                print_queue_row(q, name_w, &baseline);
+            } else {
+                print_missing_row(name, name_w);
+            }
+        }
+    } else {
+        if queues.is_empty() {
+            println!("  (no queues found)");
+            return;
+        }
+        let mut sorted: Vec<&QueueInfo> = queues.iter().collect();
+        sorted.sort_by(|a, b| a.name.cmp(&b.name));
+        let name_w = sorted.iter().map(|q| q.name.len()).max().unwrap_or(5).max(5);
+        print_snapshot_header(name_w);
+        for q in &sorted {
+            print_queue_row(q, name_w, &baseline);
+        }
+    }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = CApp::new("RabbiTui")
         .version("0.1.0")
@@ -399,6 +513,30 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .required(false)
                 .default_value(DEFAULT_ADDR),
         )
+        .arg(
+            Arg::new("snapshot")
+                .about("Print queue status table to stdout and exit (non-interactive)")
+                .long("snapshot")
+                .short('s')
+                .required(false)
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("filter")
+                .about("Comma-separated queue names to show in snapshot mode")
+                .long("filter")
+                .short('f')
+                .required(false)
+                .takes_value(true),
+        )
+        .arg(
+            Arg::new("baseline")
+                .about("File to store baseline delivered counts. DELIVERED column shows delta from baseline. File is created on first call.")
+                .long("baseline")
+                .short('b')
+                .required(false)
+                .takes_value(true),
+        )
         .get_matches();
 
     let user = matches.value_of("user").unwrap();
@@ -410,6 +548,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("Check that the service is running and that creds are correct.");
         return Ok(());
     }
+
+    // Snapshot mode: print table and exit without TUI setup
+    if matches.is_present("snapshot") {
+        let filter = matches.value_of("filter");
+        let baseline = matches.value_of("baseline");
+        print_snapshot(&c, filter, baseline);
+        return Ok(());
+    }
+
     // TODO allow override this.
     let config = AppConfig::default();
     let mut app = App::<TBackend>::new::<Client>(Arc::new(c), config);
